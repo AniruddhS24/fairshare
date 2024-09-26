@@ -21,6 +21,9 @@ const config: Config = {
       fontFamily: {
         sans: ["Helvetica Neue", "sans-serif"],
       },
+      boxShadow: {
+        'custom-light': '0 0 4px 0 rgba(0, 0, 0, 0.10)',
+      },
     },
   },
   plugins: [],

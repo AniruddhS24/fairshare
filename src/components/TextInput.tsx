@@ -9,7 +9,7 @@ interface InputProps {
   className?: string; // Allow additional Tailwind classes
 }
 
-const Input: React.FC<InputProps> = ({
+const TextInput: React.FC<InputProps> = ({
   placeholder = 'Enter text...',
   value,
   setValue,
@@ -31,4 +31,4 @@ const Input: React.FC<InputProps> = ({
   );
 };
 
-export default Input;
+export default TextInput;
