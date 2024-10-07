@@ -30,7 +30,7 @@ export default function UploadReceiptPage() {
   };
 
   const handleSplitReceipt = () => {
-    router.push('/editreceipt');
+    router.push('/1/editreceipt');
   }
 
   return uploadedImage ? (

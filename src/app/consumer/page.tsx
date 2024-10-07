@@ -14,7 +14,7 @@ export default function ConsumerOnboardingPage() {
   const [phoneNumber, setPhoneNumber] = useState<string>('');
 
   return (
-    <div className="h-screen flex flex-col items-center justify-start bg-white px-5">
+    <div className="h-full flex flex-col items-center justify-start bg-white px-5">
       <Spacer size="large" />
       <Image src="/logo.png" alt="Logo" width={250} height={100}/>
       <Spacer size="large" />

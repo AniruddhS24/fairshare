@@ -13,6 +13,7 @@ const config: Config = {
         foreground: "var(--foreground)",
         primary: "#087A87",
         primarydark: "#014851",
+        accentlight: "#B3D2A34d",
         accent: "#B3D2A3",
         darkest: "#1C2B35",
         midgray: "#5F758A",

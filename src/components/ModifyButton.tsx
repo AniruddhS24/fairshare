@@ -15,7 +15,7 @@ const ModifyButton: React.FC<ModifyButtonProps> = ({ label, icon, onClick}) => {
     className={`self-end transition-transform duration-200 active:scale-90`}
     >
         <div className="flex justify-center items-center">
-          <i className={`fa-solid ${icon} text-primary fa-lg me-1`}></i>
+          <i className={`fa-solid ${icon} text-primary fa-md me-1`}></i>
           <Text type="s_heading" className="text-primary">{label}</Text>
         </div>
     </button>

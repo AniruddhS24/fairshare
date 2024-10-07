@@ -1,21 +1,26 @@
 "use client";
 
-import { useState } from 'react';
-
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Spacer from "@/components/Spacer";
-import Text from "../../components/Text";
+import Text from "../../../components/Text";
 import ItemInput from '@/components/ItemInput';
 import PriceInput from '@/components/PriceInput';
 import QuantityInput from '@/components/QuantityInput';
 import ModifyButton from '@/components/ModifyButton';
 import LineItem from '@/components/LineItem';
 import StickyButton from '@/components/StickyButton';
+import { fetchDummyData, setDummyData } from '../../lib/backend';
 
-export default function EditReceiptPage() {
-  const [receiptItems, setReceiptItems] = useState([
-    {name: 'Item 1', qty: 1, price: 5},
-    {name: 'Item 2', qty: 2, price: 6}]); // Initial state with one text box
+export default function EditReceiptPage({ params }: { params: { receiptid: string } }) {
+  const [receiptItems, setReceiptItems] = useState([]);
   const [sharedCharges, setSharedCharges] = useState(3.00);
+  const router = useRouter();
+
+  useEffect(() => {
+    setReceiptItems(fetchDummyData());
+  }
+  , []);
 
   const setItemProp = (index: number, field: string) => (value) => {
     const newTextBoxes = [...receiptItems];
@@ -40,13 +45,15 @@ export default function EditReceiptPage() {
   }
 
   const handleSaveEdits = () => {
-    // TODO: Save the edited receipt
+    const data = receiptItems;
+    setDummyData(data.map(({name, qty, price}) => ({name, qty: parseInt(qty), price: parseFloat(price)})));
+    router.push(`/${params.receiptid}/split`);
   }
 
   return (
-    <div className="h-screen flex flex-col items-start justify-start bg-white px-5">
+    <div className="h-full flex flex-col items-start justify-start bg-white px-5 pb-12">
         <Spacer size="large" />
-        <Text type="xl_heading">Edit Receipt</Text>
+        <Text type="xl_heading">Edit Receipt {params.receiptid}</Text>
         <Spacer size="small" />
         <Text type="body">Fix any mistakes or add missing items.</Text>
         <Spacer size="large" />
@@ -90,7 +97,7 @@ export default function EditReceiptPage() {
           </button>
         </div>
         <Spacer size="medium" />
-        <LineItem label="Grand Total" price={calculateTotal()} labelColor='text-darkest'/>
+        <LineItem label="Grand Total" price={calculateTotal()} labelColor='text-darkest' bold/>
         <StickyButton label="Next" onClick={handleSaveEdits} sticky />
     </div>
   );

@@ -11,7 +11,7 @@ export default function Home() {
   const [inputValue, setInputValue] = useState<string>('');
 
   return (
-    <div className="h-screen flex flex-col items-center justify-center bg-white px-5">
+    <div className="h-full flex flex-col items-center justify-center bg-white px-5">
       <Image src="/logo.png" alt="Logo" width={250} height={100}/>
       <Spacer size="large" />
       <Text type="m_heading">Heading</Text>
