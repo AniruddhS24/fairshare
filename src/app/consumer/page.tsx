@@ -18,8 +18,8 @@ export default function ConsumerOnboardingPage() {
       <Spacer size="large" />
       <Image src="/logo.png" alt="Logo" width={250} height={100}/>
       <Spacer size="large" />
-      <Text type="m_heading">Consumer Information</Text>
-      <Text type="body" className="text-center">Please enter your name and phone number to get started</Text>
+      <Text type="m_heading" className="text-darkest">Consumer Information</Text>
+      <Text type="body" className="text-center text-midgray">Please enter your name and phone number to get started</Text>
       <Spacer size="large" />
       <TextInput placeholder="Name" value={name} setValue={setName} />
       <Spacer size="medium" />

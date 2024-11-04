@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React from "react";
 
 interface InputProps {
   placeholder?: string;
@@ -10,12 +10,11 @@ interface InputProps {
 }
 
 const ItemInput: React.FC<InputProps> = ({
-  placeholder = 'Enter text...',
+  placeholder = "Enter text...",
   value,
   setValue,
-  className = '',
+  className = "",
 }) => {
-
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setValue(e.target.value);
   };
@@ -26,7 +25,7 @@ const ItemInput: React.FC<InputProps> = ({
       placeholder={placeholder}
       value={value}
       onChange={handleChange}
-      className={`w-full font-normal text-darkest shadow-custom-light placeholder-midgray rounded-xl py-2 px-4 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent ${className}`}
+      className={`w-full font-normal text-darkest shadow-custom-light placeholder-midgray rounded-xl py-2 px-2 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent ${className}`}
     />
   );
 };

@@ -6,9 +6,9 @@ interface SpacerProps {
 }
 
 const sizeMap = {
-  small: 'mb-2',     // 0.5rem (8px)
-  medium: 'mb-4',    // 1rem (16px)
-  large: 'mb-6',     // 1.5rem (24px)
+  small: 'mb-2',
+  medium: 'mb-4',
+  large: 'mb-6',
 };
 
 const Spacer: React.FC<SpacerProps> = ({ size = 'medium' }) => {

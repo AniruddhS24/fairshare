@@ -4,7 +4,7 @@ import Text from './Text';
 interface ConsumerBreakdownProps {
   consumer: string;
   items: {
-    item: string;
+    name: string;
     quantity: number;
     split: number;
     price: number;
@@ -26,11 +26,11 @@ const ConsumerBreakdown: React.FC<ConsumerBreakdownProps> = ({consumer, items, s
                 <Text type="body_bold" className="text-darkest">{consumer}</Text>
                 {isHost ? <span className="ml-2 px-2 py-1 font-bold text-sm text-primary bg-accentlight rounded-md">Host</span> : null}
             </div>
-            <Text type="body_bold" className="text-midgray">${items.reduce((acc, item) => acc + calculateShare(item.quantity, item.split, item.price), 0).toFixed(2)}</Text>
+            <Text type="body_bold" className="text-midgray">${(sharedCost + items.reduce((acc, item) => acc + calculateShare(item.quantity, item.split, item.price), 0)).toFixed(2)}</Text>
         </div>
         {items.map((item, index) => (
             <div className="flex justify-between items-center w-full" key={index}>
-                <Text className="text-darkest">{item.quantity} {item.item} / {item.split}</Text>
+                <Text className="text-darkest">{item.quantity} {item.name}{item.split > 1 ? ` / ${item.split}` : null}</Text>
                 <Text className="text-midgray">{calculateShare(item.quantity, item.split, item.price).toFixed(2)}</Text>
             </div>
         ))}

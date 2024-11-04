@@ -28,7 +28,7 @@ const SquareButton: React.FC<SquareButtonProps> = ({ label, color, icon, onClick
       className={`flex flex-col items-center w-full px-4 pt-8 pb-4 ${squareColors[color].bg} rounded-lg transition-colors duration-150 ease-in-out active:scale-95`}
     >
       <i className={`fa-solid ${icon} fa-2xl ${squareColors[color].text}`}></i>
-      <Text type="body_semi_custom" className={`${squareColors[color].text} mt-6`}>
+      <Text type="body_semi" className={`${squareColors[color].text} mt-6`}>
         {label}
       </Text>
     </button>
