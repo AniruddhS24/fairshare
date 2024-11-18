@@ -12,7 +12,23 @@ import StickyButton from "@/components/StickyButton";
 import { useGlobalContext, Permission } from "@/contexts/GlobalContext";
 import { backend } from "@/lib/backend";
 
-const AccordionItem = ({ item, setQuantity, setSplit }) => {
+type AccordionItemProps = {
+  item: {
+    id: number;
+    name: string;
+    quantity: string;
+    price: string;
+    split: string;
+  };
+  setQuantity: (value: number) => void;
+  setSplit: (value: number) => void;
+};
+
+const AccordionItem: React.FC<AccordionItemProps> = ({
+  item,
+  setQuantity,
+  setSplit,
+}) => {
   const [isOpen, setIsOpen] = useState(false);
 
   const toggleAccordion = () => {
