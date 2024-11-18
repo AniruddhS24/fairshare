@@ -2,10 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Text from "@/components/Text";
-import SquareButton from "@/components/SquareButton";
-import Image from "next/image";
 import Spacer from "@/components/Spacer";
-import ModifyButton from "@/components/ModifyButton";
 import StickyButton from "@/components/StickyButton";
 import { useRouter } from "next/navigation";
 import SegmentedToggle from "@/components/Toggle";
@@ -21,7 +18,7 @@ export default function ConsumerDashboard({
 }) {
   const { user, invalid_token, getPermission } = useGlobalContext();
   const [selectedTab, setSelectedTab] = useState(0);
-  const [receiptItems, setReceiptItems] = useState([]);
+  // const [receiptItems, setReceiptItems] = useState([]);
 
   const router = useRouter();
 
@@ -38,7 +35,7 @@ export default function ConsumerDashboard({
       });
     }
 
-    setReceiptItems(dummyGetReceiptItems(params.receiptid));
+    // setReceiptItems(dummyGetReceiptItems(params.receiptid));
   }, [user, invalid_token]);
 
   const markSettled = () => {

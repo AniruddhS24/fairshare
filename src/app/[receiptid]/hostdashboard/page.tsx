@@ -39,7 +39,7 @@ export default function HostDashboard({
       "GET",
       `/receipt/${params.receiptid}/participants`
     );
-    let users = {};
+    const users = {};
     for (const user of resp.data.hosts) {
       users[user.id] = { ...user, host: true };
     }
@@ -51,7 +51,7 @@ export default function HostDashboard({
 
   const fetchItems = async () => {
     const resp = await backend("GET", `/receipt/${params.receiptid}/item`);
-    let items = {};
+    const items = {};
     for (const item of resp.data) {
       items[item.id] = { ...item, consumers: [] };
     }
@@ -60,7 +60,7 @@ export default function HostDashboard({
 
   const fetchSplits = async () => {
     const resp = await backend("GET", `/receipt/${params.receiptid}/split`);
-    let splits = [];
+    const splits = [];
     for (const split of resp.data) {
       splits.push(split);
     }

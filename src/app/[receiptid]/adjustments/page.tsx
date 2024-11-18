@@ -123,7 +123,14 @@ export default function AdjustmentsPage({
       }
       setReceiptItems(items);
     });
-  }, [user, invalid_token]);
+  }, [
+    user,
+    invalid_token,
+    getPermission,
+    params.receiptid,
+    router,
+    searchParams,
+  ]);
 
   const setItemProp = (index: number, field: string) => (value) => {
     const newTextBoxes = [...receiptItems];

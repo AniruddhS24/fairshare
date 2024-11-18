@@ -25,7 +25,7 @@ export default function UploadReceiptPage() {
     } else {
       // set loading
     }
-  }, [user, invalid_token]);
+  }, [user, invalid_token, router]);
 
   const handleFileUpload = (event) => {
     const file = event.target.files[0];

@@ -1,15 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Text from "../../components/Text";
-import SquareButton from "../../components/SquareButton";
 import Image from "next/image";
 import Spacer from "@/components/Spacer";
-import ModifyButton from "@/components/ModifyButton";
-import StickyButton from "@/components/StickyButton";
-import { useRouter } from "next/navigation";
-import { useGlobalContext, Permission } from "@/contexts/GlobalContext";
-import { backend } from "@/lib/backend";
 
 export default function UnauthorizedPage() {
   return (

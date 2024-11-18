@@ -43,7 +43,7 @@ export default function SplitPage({
       }
       setReceiptItems(items);
     });
-  }, [user, invalid_token]);
+  }, [user, invalid_token, getPermission, params.receiptid, router]);
 
   const setChecked = (index: number) => {
     const newItems = [...receiptItems];

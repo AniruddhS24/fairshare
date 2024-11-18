@@ -1,10 +1,10 @@
 const apiUrl = "https://ztzl10kljk.execute-api.us-east-1.amazonaws.com/prod";
 
 export async function backend(
-  method: string,
+  method: "GET" | "POST" | "PUT" | "DELETE",
   endpoint: string,
-  body: any = null
-): Promise<any> {
+  body: unknown = null
+): Promise<unknown> {
   const token = localStorage.getItem("jwt");
   try {
     const response = await fetch(`${apiUrl}${endpoint}`, {

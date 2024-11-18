@@ -1,23 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import Text from "@/components/Text";
-import SquareButton from "@/components/SquareButton";
-import Image from "next/image";
 import Spacer from "@/components/Spacer";
-import ModifyButton from "@/components/ModifyButton";
-import StickyButton from "@/components/StickyButton";
-import { useRouter } from "next/navigation";
-import { useGlobalContext } from "@/contexts/GlobalContext";
 
-export default function DoneReceiptPage({
-  params,
-}: {
-  params: { receiptid: string };
-}) {
-  const { user } = useGlobalContext();
-  const router = useRouter();
-
+export default function DoneReceiptPage() {
   return (
     <div className="flex flex-col h-full items-center justify-center">
       <Spacer size="large" />

@@ -17,12 +17,12 @@ const PriceInput: React.FC<PriceInputProps> = ({
   const [prevValue, setPrevValue] = useState(value);
 
   const formatPrice = (val: string) => {
-    let formatted = val.replace(/\D/g, "");
+    const formatted = val.replace(/\D/g, "");
     if (formatted === "") {
       return "0.00";
     }
-    let parsedValue = parseInt(formatted, 10);
-    let dollarValue = (parsedValue / 100).toFixed(2);
+    const parsedValue = parseInt(formatted, 10);
+    const dollarValue = (parsedValue / 100).toFixed(2);
     return dollarValue;
   };
 
