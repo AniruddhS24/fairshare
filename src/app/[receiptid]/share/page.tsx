@@ -35,7 +35,7 @@ export default function ShareReceiptPage({
         await navigator.share({
           title: "FairShare",
           text: "Split your receipt with FairShare",
-          url: `http://10.0.0.33:3000/user?receiptid=${params.receiptid}&onboardConsumer=true`, // URL to share (should be link/user?receiptid=...&onboardConsumer=true&page=split)
+          url: `https://main.d3o7tn3uwoluhy.amplifyapp.com/user?receiptid=${params.receiptid}&onboardConsumer=true`, // URL to share (should be link/user?receiptid=...&onboardConsumer=true&page=split)
         });
         console.log("Content shared successfully");
       } catch (error) {
