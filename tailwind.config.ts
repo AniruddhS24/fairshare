@@ -5,6 +5,8 @@ const config: Config = {
     "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/contexts/*.{js,ts,jsx,tsx,mdx}",
+    "./src/lib/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
     extend: {
@@ -23,7 +25,7 @@ const config: Config = {
         sans: ["Helvetica Neue", "sans-serif"],
       },
       boxShadow: {
-        'custom-light': '0 0 4px 0 rgba(0, 0, 0, 0.10)',
+        "custom-light": "0 0 4px 0 rgba(0, 0, 0, 0.10)",
       },
     },
   },
