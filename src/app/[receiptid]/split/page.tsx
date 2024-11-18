@@ -6,7 +6,6 @@ import Spacer from "@/components/Spacer";
 import Text from "../../../components/Text";
 import LineItem from "@/components/LineItem";
 import StickyButton from "@/components/StickyButton";
-import { dummyGetReceiptItems } from "../../lib/backend";
 import { useGlobalContext, Permission } from "@/contexts/GlobalContext";
 import { backend } from "@/lib/backend";
 

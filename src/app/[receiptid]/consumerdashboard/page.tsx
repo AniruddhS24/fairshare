@@ -9,7 +9,6 @@ import ModifyButton from "@/components/ModifyButton";
 import StickyButton from "@/components/StickyButton";
 import { useRouter } from "next/navigation";
 import SegmentedToggle from "@/components/Toggle";
-import { dummyGetReceiptItems } from "../../lib/backend";
 import LineItem from "@/components/LineItem";
 import ConsumerBreakdown from "@/components/ConsumerBreakdown";
 import ItemBreakdown from "@/components/ItemBreakdown";

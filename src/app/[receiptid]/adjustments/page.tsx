@@ -9,7 +9,6 @@ import Text from "../../../components/Text";
 import QuantityInput from "@/components/QuantityInput";
 import ModifyButton from "@/components/ModifyButton";
 import StickyButton from "@/components/StickyButton";
-import { dummyGetReceiptItems } from "../../lib/backend";
 import { useGlobalContext, Permission } from "@/contexts/GlobalContext";
 import { backend } from "@/lib/backend";
 
