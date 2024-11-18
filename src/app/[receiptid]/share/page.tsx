@@ -27,7 +27,7 @@ export default function ShareReceiptPage({
         }
       });
     }
-  }, [user, invalid_token]);
+  }, [user, invalid_token, getPermission, params.receiptid, router]);
 
   const handleShare = async () => {
     if (navigator.share) {
