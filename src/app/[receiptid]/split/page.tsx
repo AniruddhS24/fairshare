@@ -7,34 +7,44 @@ import Text from "../../../components/Text";
 import LineItem from "@/components/LineItem";
 import StickyButton from "@/components/StickyButton";
 import { dummyGetReceiptItems } from "../../lib/backend";
+import { useGlobalContext, Permission } from "@/contexts/GlobalContext";
+import { backend } from "@/lib/backend";
 
 export default function SplitPage({
   params,
 }: {
   params: { receiptid: string };
 }) {
-  const apiUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+  const { user, invalid_token, getPermission } = useGlobalContext();
   const [receiptItems, setReceiptItems] = useState([]);
   const router = useRouter();
   useEffect(() => {
-    fetch(`${apiUrl}/receipt/${params.receiptid}/item`, {
-      method: "GET",
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        const items = [];
-        for (const item of data.data) {
-          items.push({
-            id: item.id,
-            name: item.name,
-            quantity: item.quantity,
-            price: item.price,
-            isChecked: false,
-          });
+    if (!user) {
+      // set loading
+    } else if (invalid_token) {
+      router.push(`/user?receiptid=${params.receiptid}&page=split`);
+    } else {
+      getPermission(params.receiptid).then((permission) => {
+        if (permission === Permission.UNAUTHORIZED) {
+          router.push(`/unauthorized`);
         }
-        setReceiptItems(items);
       });
-  }, []);
+    }
+
+    backend("GET", `/receipt/${params.receiptid}/item`).then((resp) => {
+      const items = [];
+      for (const item of resp.data) {
+        items.push({
+          id: item.id,
+          name: item.name,
+          quantity: item.quantity,
+          price: item.price,
+          isChecked: false,
+        });
+      }
+      setReceiptItems(items);
+    });
+  }, [user, invalid_token]);
 
   const setChecked = (index: number) => {
     const newItems = [...receiptItems];

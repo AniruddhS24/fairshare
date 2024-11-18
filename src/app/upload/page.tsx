@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Text from "../../components/Text";
 import SquareButton from "../../components/SquareButton";
 import Image from "next/image";
@@ -8,12 +8,24 @@ import Spacer from "@/components/Spacer";
 import ModifyButton from "@/components/ModifyButton";
 import StickyButton from "@/components/StickyButton";
 import { useRouter } from "next/navigation";
+import { useGlobalContext, Permission } from "@/contexts/GlobalContext";
+import { backend } from "@/lib/backend";
 
 export default function UploadReceiptPage() {
+  const { user, invalid_token } = useGlobalContext();
   const router = useRouter();
-  const apiUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
   const [uploadedImage, setUploadedImage] = useState(null);
   const [uploadedFile, setUploadedFile] = useState(null);
+
+  useEffect(() => {
+    if (!user) {
+      // set loading
+    } else if (invalid_token) {
+      router.push("/user?redirect=upload");
+    } else {
+      // set loading
+    }
+  }, [user, invalid_token]);
 
   const handleFileUpload = (event) => {
     const file = event.target.files[0];
@@ -33,12 +45,7 @@ export default function UploadReceiptPage() {
   };
 
   const getPresignedUrl = async () => {
-    console.log(apiUrl);
-    const response = await fetch(`${apiUrl}/upload`, {
-      method: "GET",
-    });
-    const data = await response.json();
-    console.log(data);
+    const data = await backend("GET", "/upload");
     return data.presigned_url;
   };
 
@@ -66,18 +73,11 @@ export default function UploadReceiptPage() {
       console.log("File upload failure");
     } else {
       const key = fields.key;
-      fetch(`${apiUrl}/ocr`, {
-        method: "POST",
-        body: JSON.stringify({ key }),
-        headers: {
-          "Content-Type": "application/json",
-        },
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          console.log(data);
-          router.push(`/${key}/editreceipt`);
-        });
+      await backend("POST", "/ocr", { key });
+      await backend("POST", `/receipt/${key}/role`, {
+        role: Permission.HOST,
+      });
+      router.push(`/${key}/editreceipt`);
     }
   };
 

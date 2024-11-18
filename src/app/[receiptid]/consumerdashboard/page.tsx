@@ -13,20 +13,34 @@ import { dummyGetReceiptItems } from "../../lib/backend";
 import LineItem from "@/components/LineItem";
 import ConsumerBreakdown from "@/components/ConsumerBreakdown";
 import ItemBreakdown from "@/components/ItemBreakdown";
+import { useGlobalContext, Permission } from "@/contexts/GlobalContext";
 
 export default function ConsumerDashboard({
   params,
 }: {
   params: { receiptid: string };
 }) {
+  const { user, invalid_token, getPermission } = useGlobalContext();
   const [selectedTab, setSelectedTab] = useState(0);
   const [receiptItems, setReceiptItems] = useState([]);
 
   const router = useRouter();
 
   useEffect(() => {
+    if (!user) {
+      // set loading
+    } else if (invalid_token) {
+      router.push(`/user?receiptid=${params.receiptid}&page=adjustments`);
+    } else {
+      getPermission(params.receiptid).then((permission) => {
+        if (permission === Permission.UNAUTHORIZED) {
+          router.push(`/unauthorized`);
+        }
+      });
+    }
+
     setReceiptItems(dummyGetReceiptItems(params.receiptid));
-  }, []);
+  }, [user, invalid_token]);
 
   const markSettled = () => {
     alert("TODO");

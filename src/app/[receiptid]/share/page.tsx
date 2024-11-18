@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Text from "@/components/Text";
 import SquareButton from "@/components/SquareButton";
 import Image from "next/image";
@@ -8,20 +8,37 @@ import Spacer from "@/components/Spacer";
 import ModifyButton from "@/components/ModifyButton";
 import StickyButton from "@/components/StickyButton";
 import { useRouter } from "next/navigation";
+import { useGlobalContext, Permission } from "@/contexts/GlobalContext";
 
 export default function ShareReceiptPage({
   params,
 }: {
   params: { receiptid: string };
 }) {
+  const { user, invalid_token, getPermission } = useGlobalContext();
   const router = useRouter();
+
+  useEffect(() => {
+    if (!user) {
+      // set loading
+    } else if (invalid_token) {
+      router.push(`/user?receiptid=${params.receiptid}&page=share`);
+    } else {
+      getPermission(params.receiptid).then((permission) => {
+        if (permission === Permission.UNAUTHORIZED) {
+          router.push(`/unauthorized`);
+        }
+      });
+    }
+  }, [user, invalid_token]);
+
   const handleShare = async () => {
     if (navigator.share) {
       try {
         await navigator.share({
           title: "FairShare",
           text: "Split your receipt with FairShare",
-          url: "https://example.com", // URL to share
+          url: `http://10.0.0.33:3000/user?receiptid=${params.receiptid}&onboardConsumer=true`, // URL to share (should be link/user?receiptid=...&onboardConsumer=true&page=split)
         });
         console.log("Content shared successfully");
       } catch (error) {

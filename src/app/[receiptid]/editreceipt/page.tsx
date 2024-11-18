@@ -11,67 +11,93 @@ import ModifyButton from "@/components/ModifyButton";
 import LineItem from "@/components/LineItem";
 import StickyButton from "@/components/StickyButton";
 import Spinner from "@/components/Spinner";
-import { dummyGetReceiptItems, dummySetReceiptItems } from "../../lib/backend";
+import { useGlobalContext, Permission } from "@/contexts/GlobalContext";
+import { backend } from "@/lib/backend";
 
 export default function EditReceiptPage({
   params,
 }: {
   params: { receiptid: string };
 }) {
-  const apiUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+  const { user, invalid_token, getPermission } = useGlobalContext();
   const [loading, setLoading] = useState(true);
   const [receiptItems, setReceiptItems] = useState([]);
   const [sharedCharges, setSharedCharges] = useState({
     value: "0.00",
     edited: false,
   });
+  const [counter, setCounter] = useState(0);
   const router = useRouter();
 
   useEffect(() => {
-    setLoading(true);
-    fetch(`${apiUrl}/receipt/${params.receiptid}`, {
-      method: "GET",
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        const receipt = data.data;
-        setSharedCharges({ value: receipt.shared_cost, edited: false });
-      });
-    fetch(`${apiUrl}/receipt/${params.receiptid}/item`, {
-      method: "GET",
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        const items = [];
-        for (const item of data.data) {
-          items.push({
-            id: item.id,
-            name: item.name,
-            quantity: item.quantity,
-            price: item.price,
-            edited: false,
-            deleted: false,
-          });
+    if (!user) {
+      // set loading
+    } else if (invalid_token) {
+      router.push(`/user?receiptid=${params.receiptid}&page=editreceipt`);
+    } else {
+      getPermission(params.receiptid).then((permission) => {
+        if (permission === Permission.UNAUTHORIZED) {
+          router.push(`/unauthorized`);
         }
-        setReceiptItems(items);
-        setLoading(false);
       });
-  }, []);
+    }
+
+    setLoading(true);
+    backend("GET", `/receipt/${params.receiptid}`).then((resp) => {
+      const receipt = resp.data;
+      setSharedCharges({ value: receipt.shared_cost, edited: false });
+    });
+
+    backend("GET", `/receipt/${params.receiptid}/item`).then((resp) => {
+      const items = [];
+      let ct = counter;
+      for (const item of resp.data) {
+        items.push({
+          id: item.id,
+          index: ct,
+          name: item.name,
+          quantity: item.quantity,
+          price: item.price,
+          edited: false,
+          deleted: false,
+        });
+        ct++;
+      }
+      setCounter(ct);
+      setReceiptItems(items);
+      setLoading(false);
+    });
+  }, [user, invalid_token]);
 
   const setItemProp = (index: number, field: string) => (value) => {
-    const newTextBoxes = [...receiptItems];
-    newTextBoxes[index][field] = value;
-    newTextBoxes[index].edited = true;
-    setReceiptItems(newTextBoxes);
+    const newReceiptItems = [...receiptItems];
+    newReceiptItems[index][field] = value;
+    newReceiptItems[index].edited = true;
+    setReceiptItems(newReceiptItems);
   };
 
   const deleteItem = (index) => {
     if (receiptItems.length > 1) {
-      const newTextBoxes = [...receiptItems];
-      const item = newTextBoxes[index];
+      const newReceiptItems = [...receiptItems];
+      const item = newReceiptItems[index];
       item.deleted = true;
-      setReceiptItems(newTextBoxes);
+      setReceiptItems(newReceiptItems);
     }
+  };
+
+  const addItem = () => {
+    const newReceiptItems = [...receiptItems];
+    newReceiptItems.push({
+      id: null,
+      index: counter,
+      name: "",
+      quantity: 1,
+      price: 0,
+      edited: false,
+      deleted: false,
+    });
+    setCounter(counter + 1);
+    setReceiptItems(newReceiptItems);
   };
 
   const calculateTotal = () => {
@@ -87,45 +113,42 @@ export default function EditReceiptPage({
   const handleSaveEdits = async () => {
     const data = receiptItems;
     let edited = sharedCharges.edited;
+    const promises = [];
     for (const item of data) {
       if (item.id && item.edited) {
         edited = true;
-        await fetch(`${apiUrl}/receipt/${params.receiptid}/item/${item.id}`, {
-          method: "PUT",
-          body: JSON.stringify({
+        promises.push(
+          backend("PUT", `/receipt/${params.receiptid}/item/${item.id}`, {
             name: item.name,
             quantity: item.quantity,
             price: item.price,
-          }),
-        });
+          })
+        );
       } else if (item.id && item.deleted) {
         edited = true;
-        await fetch(`${apiUrl}/receipt/${params.receiptid}/item/${item.id}`, {
-          method: "DELETE",
-        });
+        promises.push(
+          backend("DELETE", `/receipt/${params.receiptid}/item/${item.id}`)
+        );
       } else if (!item.id) {
         edited = true;
-        await fetch(`${apiUrl}/receipt/${params.receiptid}/item`, {
-          method: "POST",
-          body: JSON.stringify({
+        promises.push(
+          backend("POST", `/receipt/${params.receiptid}/item`, {
             name: item.name,
             quantity: item.quantity,
             price: item.price,
-          }),
-        });
+          })
+        );
       }
     }
-    console.log(edited);
-    console.log(calculateTotal());
     if (edited) {
-      fetch(`${apiUrl}/receipt/${params.receiptid}`, {
-        method: "PUT",
-        body: JSON.stringify({
+      promises.push(
+        backend("PUT", `/receipt/${params.receiptid}`, {
           shared_cost: sharedCharges.value,
           grand_total: calculateTotal(),
-        }),
-      });
+        })
+      );
     }
+    await Promise.all(promises);
     router.push(`/${params.receiptid}/split`);
   };
 
@@ -145,39 +168,39 @@ export default function EditReceiptPage({
           <div className="grid grid-cols-9 gap-y-3 w-full">
             {receiptItems
               .filter((item) => !item.deleted)
-              .map((item, index) => (
+              .map((item, list_index) => (
                 <div
                   className="col-span-9 grid grid-cols-9 items-center gap-x-1 gap-y-3"
-                  key={index}
+                  key={item.index}
                 >
                   <div className="col-span-4 flex justify-center items-center">
                     <ItemInput
                       placeholder="Item name"
                       value={item.name}
-                      setValue={setItemProp(index, "name")}
+                      setValue={setItemProp(item.index, "name")}
                     />
                   </div>
                   <div className="col-span-2 flex justify-center items-center">
                     <QuantityInput
                       placeholder="Quantity"
                       value={item.quantity}
-                      setValue={setItemProp(index, "quantity")}
+                      setValue={setItemProp(item.index, "quantity")}
                     />
                   </div>
                   <div className="col-span-2 flex justify-center items-center">
                     <PriceInput
                       placeholder="Price"
                       value={item.price}
-                      setValue={setItemProp(index, "price")}
+                      setValue={setItemProp(item.index, "price")}
                     />
                   </div>
                   <button
-                    onClick={() => deleteItem(index)}
+                    onClick={() => deleteItem(item.index)}
                     className="col-span-1 flex justify-center items-center transition-transform duration-200 active:scale-90"
                   >
                     <i className="fas fa-trash text-midgray"></i>
                   </button>
-                  {index !== receiptItems.length - 1 && (
+                  {list_index !== receiptItems.length - 1 && (
                     <div className="col-span-9 justify-center items-center">
                       <hr className="border-gray-[#C1C9D01e]" />
                     </div>
@@ -189,19 +212,7 @@ export default function EditReceiptPage({
           <ModifyButton
             label="Add Item"
             icon="fa-plus"
-            onClick={() =>
-              setReceiptItems([
-                ...receiptItems,
-                {
-                  id: null,
-                  name: "",
-                  quantity: 1,
-                  price: 0,
-                  edited: false,
-                  deleted: false,
-                },
-              ])
-            }
+            onClick={() => addItem()}
           />
           <Spacer size="medium" />
           <div className="col-span-8 grid grid-cols-8 items-center gap-2">

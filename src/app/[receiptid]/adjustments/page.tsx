@@ -10,6 +10,8 @@ import QuantityInput from "@/components/QuantityInput";
 import ModifyButton from "@/components/ModifyButton";
 import StickyButton from "@/components/StickyButton";
 import { dummyGetReceiptItems } from "../../lib/backend";
+import { useGlobalContext, Permission } from "@/contexts/GlobalContext";
+import { backend } from "@/lib/backend";
 
 const AccordionItem = ({ item, setQuantity, setSplit }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -86,35 +88,43 @@ export default function AdjustmentsPage({
 }: {
   params: { receiptid: string };
 }) {
-  const apiUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+  const { user, invalid_token, getPermission } = useGlobalContext();
   const [receiptItems, setReceiptItems] = useState([]);
   const searchParams = useSearchParams();
   const router = useRouter();
 
   useEffect(() => {
-    fetch(`${apiUrl}/receipt/${params.receiptid}/item`, {
-      method: "GET",
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        let items = [];
-        for (const item of data.data) {
-          items.push({
-            id: item.id,
-            name: item.name,
-            quantity: item.quantity,
-            price: item.price,
-            split: "",
-          });
+    if (!user) {
+      // set loading
+    } else if (invalid_token) {
+      router.push(`/user?receiptid=${params.receiptid}&page=adjustments`);
+    } else {
+      getPermission(params.receiptid).then((permission) => {
+        if (permission === Permission.UNAUTHORIZED) {
+          router.push(`/unauthorized`);
         }
-        const selected = searchParams.get("selected");
-        if (selected) {
-          const onlyInclude = (selected as string).split(",").map(Number);
-          items = items.filter((_, index) => onlyInclude.includes(index));
-        }
-        setReceiptItems(items);
       });
-  }, []);
+    }
+
+    backend("GET", `/receipt/${params.receiptid}/item`).then((data) => {
+      let items = [];
+      for (const item of data.data) {
+        items.push({
+          id: item.id,
+          name: item.name,
+          quantity: item.quantity,
+          price: item.price,
+          split: "",
+        });
+      }
+      const selected = searchParams.get("selected");
+      if (selected) {
+        const onlyInclude = (selected as string).split(",").map(Number);
+        items = items.filter((_, index) => onlyInclude.includes(index));
+      }
+      setReceiptItems(items);
+    });
+  }, [user, invalid_token]);
 
   const setItemProp = (index: number, field: string) => (value) => {
     const newTextBoxes = [...receiptItems];
@@ -122,20 +132,29 @@ export default function AdjustmentsPage({
     setReceiptItems(newTextBoxes);
   };
 
-  const handleSaveSelections = () => {
-    for (const item of receiptItems) {
-      fetch(`${apiUrl}/receipt/${params.receiptid}/split`, {
-        method: "POST",
-        body: JSON.stringify({
-          quantity: item.quantity,
-          split: item.split,
-          user_id: "todo",
-          item_id: item.id,
-          receipt_id: params.receiptid,
-        }),
-      });
+  const handleSaveSelections = async () => {
+    if (!user) {
+      return;
     }
-    router.push(`/${params.receiptid}/hostdashboard`);
+    const promises = [];
+    for (const item of receiptItems) {
+      promises.push(
+        backend("POST", `/receipt/${params.receiptid}/split`, {
+          quantity: item.quantity,
+          split: item.split == "" ? null : item.split,
+          item_id: item.id,
+        })
+      );
+    }
+
+    const permission = await getPermission(params.receiptid);
+    await Promise.all(promises);
+    console.log(permission);
+    if (permission === Permission.HOST) {
+      router.push(`/${params.receiptid}/share`);
+    } else if (permission === Permission.CONSUMER) {
+      router.push(`/${params.receiptid}/done`);
+    }
   };
 
   return (

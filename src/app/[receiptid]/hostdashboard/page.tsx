@@ -9,18 +9,15 @@ import SegmentedToggle from "@/components/Toggle";
 import LineItem from "@/components/LineItem";
 import ConsumerBreakdown from "@/components/ConsumerBreakdown";
 import ItemBreakdown from "@/components/ItemBreakdown";
-import {
-  dummyGetReceipt,
-  dummyGetReceiptSplits,
-  dummyGetReceiptItems,
-  dummyGetUsers,
-} from "../../lib/backend";
+import { useGlobalContext, Permission } from "@/contexts/GlobalContext";
+import { backend } from "@/lib/backend";
 
 export default function HostDashboard({
   params,
 }: {
   params: { receiptid: string };
 }) {
+  const { user, invalid_token, getPermission } = useGlobalContext();
   const [selectedTab, setSelectedTab] = useState(0);
   const [receiptItems, setReceiptItems] = useState([]);
   const [consumerItems, setConsumerItems] = useState([]);
@@ -32,55 +29,123 @@ export default function HostDashboard({
 
   const router = useRouter();
 
-  useEffect(() => {
-    const receipt = dummyGetReceipt(params.receiptid);
-    const users = dummyGetUsers();
-    const splits = dummyGetReceiptSplits(params.receiptid);
-    const items = dummyGetReceiptItems(params.receiptid);
-    const user_map = {};
-    for (const user of users) user_map[user.id] = user;
+  const fetchReceipt = async () => {
+    const resp = await backend("GET", `/receipt/${params.receiptid}`);
+    return resp.data;
+  };
 
-    const receipt_items = {};
-    for (const item of items)
-      receipt_items[item.id] = { ...item, consumers: [] };
-    const consumer_items: Record<
-      number,
-      {
-        name: string;
-        items: {
-          name: string;
-          quantity: number;
-          split: number;
-          price: number;
-        }[];
-      }
-    > = {};
-    for (const user of users) {
-      consumer_items[user.id] = {
-        name: user.name,
-        items: [],
-        host: user.id == receipt.hostId,
-      };
+  const fetchUsers = async () => {
+    const resp = await backend(
+      "GET",
+      `/receipt/${params.receiptid}/participants`
+    );
+    let users = {};
+    for (const user of resp.data.hosts) {
+      users[user.id] = { ...user, host: true };
     }
+    for (const user of resp.data.consumers) {
+      users[user.id] = { ...user, host: false };
+    }
+    return users;
+  };
 
-    for (const split of splits) {
-      receipt_items[split.itemId].consumers.push(user_map[split.userId].name);
-      consumer_items[split.userId].items.push({
-        name: items[split.itemId].name,
-        quantity: split.quantity,
-        split: split.split,
-        price: items[split.itemId].price,
+  const fetchItems = async () => {
+    const resp = await backend("GET", `/receipt/${params.receiptid}/item`);
+    let items = {};
+    for (const item of resp.data) {
+      items[item.id] = { ...item, consumers: [] };
+    }
+    return items;
+  };
+
+  const fetchSplits = async () => {
+    const resp = await backend("GET", `/receipt/${params.receiptid}/split`);
+    let splits = [];
+    for (const split of resp.data) {
+      splits.push(split);
+    }
+    return splits;
+  };
+
+  useEffect(() => {
+    if (!user) {
+      // set loading
+    } else if (invalid_token) {
+      router.push(`/user?receiptid=${params.receiptid}&page=hostdashboard`);
+    } else {
+      getPermission(params.receiptid).then((permission) => {
+        if (permission === Permission.UNAUTHORIZED) {
+          router.push(`/unauthorized`);
+        }
       });
     }
-    setReceiptItems(Object.values(receipt_items));
-    setConsumerItems(Object.values(consumer_items));
-    setSharedCost(receipt.sharedCost);
-    setNumConsumers(receipt.numConsumers);
-    setTotalCost(
-      items.reduce((acc, item) => acc + item.quantity * item.price, 0) +
-        receipt?.sharedCost
-    );
-  }, []);
+
+    const fetchData = async () => {
+      const [receipt, user_map, split_map, item_map] = await Promise.all([
+        fetchReceipt(),
+        fetchUsers(),
+        fetchSplits(),
+        fetchItems(),
+      ]);
+      const receipt_items = {};
+      const consumer_items = {};
+      let total_cost = 0.0;
+
+      for (const item_id in item_map) {
+        total_cost += item_map[item_id].quantity * item_map[item_id].price;
+        receipt_items[item_id] = {
+          name: item_map[item_id].name,
+          quantity: parseInt(item_map[item_id].quantity),
+          price: parseFloat(item_map[item_id].price),
+          consumers: [],
+        };
+      }
+
+      for (const user_id in user_map) {
+        consumer_items[user_id] = {
+          name: user_map[user_id].name,
+          items: [],
+          host: user_map[user_id].host,
+        };
+      }
+
+      const automatic_split = {};
+      for (const split of split_map) {
+        if (automatic_split.hasOwnProperty(split.item_id)) {
+          automatic_split[split.item_id] += 1;
+        } else {
+          automatic_split[split.item_id] = 1;
+        }
+      }
+      for (const item_id in item_map) {
+        if (!automatic_split.hasOwnProperty(item_id)) {
+          automatic_split[item_id] = Object.keys(user_map).length;
+        }
+      }
+
+      for (const split of split_map) {
+        const split_amount =
+          split.split == "None" ? automatic_split[split.item_id] : split.split;
+        receipt_items[split.item_id].consumers.push(
+          user_map[split.user_id].name
+        );
+        consumer_items[split.user_id].items.push({
+          name: item_map[split.item_id].name,
+          quantity: parseInt(split.quantity),
+          split: parseInt(split_amount),
+          price: parseFloat(item_map[split.item_id].price),
+        });
+      }
+
+      setReceiptItems(Object.values(receipt_items));
+      setConsumerItems(Object.values(consumer_items));
+      setSharedCost(receipt.shared_cost);
+      setNumConsumers(Object.keys(user_map).length);
+      setTotalCost(total_cost + parseFloat(receipt.shared_cost));
+    };
+
+    fetchData();
+  }, [user, invalid_token]);
 
   const markSettled = () => {
     alert("TODO");

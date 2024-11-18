@@ -7,30 +7,49 @@ import PhoneInput from "../../components/PhoneInput";
 import StickyButton from "../../components/StickyButton";
 import Image from "next/image";
 import Spacer from "@/components/Spacer";
-import { useRouter } from "next/navigation";
-import { useGlobalContext } from "@/contexts/GlobalContext";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useGlobalContext, Permission } from "@/contexts/GlobalContext";
+import { backend } from "@/lib/backend";
 
-export default function HostOnboardingPage() {
+export default function UserOnboardingPage() {
   const { user, login } = useGlobalContext();
+  const searchParams = useSearchParams();
   const router = useRouter();
   const [name, setName] = useState<string>("");
-  const [venmoHandle, setVenmoHandle] = useState<string>("");
+  // const [venmoHandle, setVenmoHandle] = useState<string>("");
   const [phoneNumber, setPhoneNumber] = useState<string>("");
+
+  const goToPage = () => {
+    if (searchParams.has("receiptid")) {
+      const receipt_id = searchParams.get("receiptid");
+      if (searchParams.has("onboardConsumer")) {
+        backend("POST", `/receipt/${receipt_id}/role`, {
+          role: Permission.CONSUMER,
+        }).then(() => {
+          router.push(`/${receipt_id}/split`);
+        });
+      } else if (searchParams.has("page")) {
+        router.push(`/${receipt_id}/${searchParams.get("page")}`);
+      }
+    } else {
+      router.push("/upload");
+    }
+  };
 
   useEffect(() => {
     if (user) {
-      console.log(`You are already logged in ${user.name} ${user.phone}`);
-      router.push("/upload");
+      console.log(user);
+      goToPage();
     }
   }, [user]);
 
-  const handleNext = () => {
+  const handleNext = async () => {
     const userData = {
       name: name,
       phone: phoneNumber,
     };
-    login(userData);
-    router.push("/upload");
+    await login(userData);
+    goToPage();
   };
 
   return (
@@ -39,19 +58,19 @@ export default function HostOnboardingPage() {
       <Image src="/logo.png" alt="Logo" width={250} height={100} />
       <Spacer size="large" />
       <Text type="m_heading" className="text-darkest">
-        Host Information
+        Enter Information
       </Text>
       <Text type="body" className="text-center text-midgray">
-        Please enter your phone nuber and Venmo handle to get started
+        Please enter your name and phone number to get started
       </Text>
       <Spacer size="large" />
       <TextInput placeholder="Name" value={name} setValue={setName} />
-      <Spacer size="medium" />
+      {/* <Spacer size="medium" />
       <TextInput
         placeholder="@venmo-handle"
         value={venmoHandle}
         setValue={setVenmoHandle}
-      />
+      /> */}
       <Spacer size="medium" />
       <PhoneInput
         placeholder="Phone number"

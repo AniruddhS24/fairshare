@@ -7,16 +7,26 @@ import React, {
   ReactNode,
   useEffect,
 } from "react";
+import { backend } from "@/lib/backend";
 
 interface User {
+  id: string;
   name: string;
   phone: string;
 }
 
+export enum Permission {
+  HOST = "host",
+  CONSUMER = "consumer",
+  UNAUTHORIZED = "unauthorized",
+}
+
 interface GlobalContextType {
   user: User | null;
+  invalid_token: boolean;
   login: (userData: User) => void;
   logout: () => void;
+  getPermission: (receiptId: string) => Promise<Permission>;
 }
 
 const GlobalContext = createContext<GlobalContextType | undefined>(undefined);
@@ -30,51 +40,68 @@ export const useGlobalContext = () => {
 };
 
 export const GlobalProvider = ({ children }: { children: ReactNode }) => {
-  const apiUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
   const [user, setUser] = useState<User | null>(null);
+  const [invalid_token, setInvalidToken] = useState(false);
 
   useEffect(() => {
     const jwt = localStorage.getItem("jwt");
     if (jwt) {
-      fetch(`${apiUrl}/token`, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${jwt}`,
-        },
-      })
-        .then((res) => res.json())
+      console.log(jwt);
+      backend("GET", "/token")
         .then((data) => {
           const user = data.data;
-          setUser({ name: user.name, phone: user.phone });
+          setInvalidToken(false);
+          setUser({ id: user.id, name: user.name, phone: user.phone });
+          console.log(`User logged in: ${user.name}`);
         })
-        .catch((error) => {
-          console.error("There was a problem!", error);
+        .catch(() => {
+          console.log("Invalid token");
+          setInvalidToken(true);
+          localStorage.removeItem("jwt");
         });
+    } else {
+      console.log("No token found");
+      setInvalidToken(true);
     }
   }, []);
 
-  const login = (userData: User) => {
-    fetch(`${apiUrl}/token`, {
-      method: "POST",
-      body: JSON.stringify(userData),
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        setUser(userData);
-        localStorage.setItem("jwt", data["token"]);
-      })
-      .catch((error) => {
-        console.error("There was a problem!", error);
-      });
+  const getPermission = async (receiptId: string): Promise<Permission> => {
+    try {
+      const resp = await backend("GET", `/receipt/${receiptId}/role`);
+      const permission = resp.data.role;
+      if (permission === "host") {
+        return Permission.HOST;
+      } else if (permission === "consumer") {
+        return Permission.CONSUMER;
+      } else {
+        return Permission.UNAUTHORIZED;
+      }
+    } catch (error) {
+      console.error("There was a problem!", error);
+      return Permission.UNAUTHORIZED;
+    }
+  };
+
+  const login = async (userData: User) => {
+    const resp = await backend("POST", "/token", userData);
+    localStorage.setItem("jwt", resp.token);
   };
 
   const logout = () => {
-    setUser(null);
     localStorage.removeItem("jwt");
+    setUser(null);
   };
 
   return (
-    <GlobalContext.Provider value={{ user, login, logout }}>
+    <GlobalContext.Provider
+      value={{
+        user,
+        invalid_token,
+        login,
+        logout,
+        getPermission,
+      }}
+    >
       {children}
     </GlobalContext.Provider>
   );
