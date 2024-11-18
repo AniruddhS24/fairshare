@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Text from "../../components/Text";
 import TextInput from "../../components/TextInput";
 import PhoneInput from "../../components/PhoneInput";
@@ -11,7 +11,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useGlobalContext, Permission } from "@/contexts/GlobalContext";
 import { backend } from "@/lib/backend";
 
-export default function UserOnboardingPage() {
+function UserOnboardingPage() {
   const { user, login } = useGlobalContext();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -85,5 +85,13 @@ export default function UserOnboardingPage() {
         }}
       />
     </div>
+  );
+}
+
+export default function UserOnboarding() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <UserOnboardingPage />
+    </Suspense>
   );
 }
