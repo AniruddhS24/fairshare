@@ -3,7 +3,7 @@
 import React from "react";
 
 interface QuantityInputProps {
-  value: string;
+  value: number;
   setValue: (value: number) => void;
   className?: string; // Allow additional Tailwind classes
 }
@@ -14,17 +14,17 @@ const QuantityInput: React.FC<QuantityInputProps> = ({
   className = "",
 }) => {
   const handleDecrease = () => {
-    if (parseInt(value) > 1) {
-      setValue(parseInt(value) - 1);
+    if (value > 1) {
+      setValue(value - 1);
     }
   };
 
   const handleIncrease = () => {
-    if (value == "") {
+    if (value == 0) {
       setValue(1);
       return;
     }
-    setValue(parseInt(value) + 1);
+    setValue(value + 1);
   };
 
   return (
@@ -34,7 +34,7 @@ const QuantityInput: React.FC<QuantityInputProps> = ({
       </button>
       <input
         type="number"
-        value={value}
+        value={value == 0 ? "" : value.toString()}
         readOnly
         className="w-full font-normal text-darkest shadow-custom-light placeholder-midgray rounded-xl p-2 text-center focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
       />

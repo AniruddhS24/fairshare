@@ -9,13 +9,13 @@ import ModifyButton from "@/components/ModifyButton";
 import StickyButton from "@/components/StickyButton";
 import { useRouter } from "next/navigation";
 import { useGlobalContext, Permission } from "@/contexts/GlobalContext";
-import { backend } from "@/lib/backend";
+import { backend, getUploadLink } from "@/lib/backend";
 
 export default function UploadReceiptPage() {
   const { user, invalid_token } = useGlobalContext();
   const router = useRouter();
-  const [uploadedImage, setUploadedImage] = useState(null);
-  const [uploadedFile, setUploadedFile] = useState(null);
+  const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
 
   useEffect(() => {
     if (!user) {
@@ -27,8 +27,8 @@ export default function UploadReceiptPage() {
     }
   }, [user, invalid_token, router]);
 
-  const handleFileUpload = (event) => {
-    const file = event.target.files[0];
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files ? event.target.files[0] : null;
     if (file) {
       const imageUrl = URL.createObjectURL(file);
       setUploadedImage(imageUrl); // Set the uploaded image URL
@@ -45,7 +45,7 @@ export default function UploadReceiptPage() {
   };
 
   const getPresignedUrl = async () => {
-    const data = await backend("GET", "/upload");
+    const data = await getUploadLink();
     return data.presigned_url;
   };
 

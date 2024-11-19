@@ -7,7 +7,15 @@ import Text from "../../../components/Text";
 import LineItem from "@/components/LineItem";
 import StickyButton from "@/components/StickyButton";
 import { useGlobalContext, Permission } from "@/contexts/GlobalContext";
-import { backend } from "@/lib/backend";
+import { getItems } from "@/lib/backend";
+
+interface SplitItems {
+  id: string;
+  name: string;
+  quantity: string;
+  price: string;
+  isChecked: boolean;
+}
 
 export default function SplitPage({
   params,
@@ -15,7 +23,7 @@ export default function SplitPage({
   params: { receiptid: string };
 }) {
   const { user, invalid_token, getPermission } = useGlobalContext();
-  const [receiptItems, setReceiptItems] = useState([]);
+  const [receiptItems, setReceiptItems] = useState<SplitItems[]>([]);
   const router = useRouter();
   useEffect(() => {
     if (!user) {
@@ -30,9 +38,9 @@ export default function SplitPage({
       });
     }
 
-    backend("GET", `/receipt/${params.receiptid}/item`).then((resp) => {
+    getItems(params.receiptid).then((data) => {
       const items = [];
-      for (const item of resp.data) {
+      for (const item of data) {
         items.push({
           id: item.id,
           name: item.name,
@@ -92,7 +100,7 @@ export default function SplitPage({
             <div className="col-span-7 flex justify-start items-center">
               <LineItem
                 label={item.name}
-                price={item.price}
+                price={parseFloat(item.price)}
                 labelColor="text-darkest"
               />
             </div>

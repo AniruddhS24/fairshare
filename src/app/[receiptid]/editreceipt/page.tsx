@@ -12,7 +12,24 @@ import LineItem from "@/components/LineItem";
 import StickyButton from "@/components/StickyButton";
 import Spinner from "@/components/Spinner";
 import { useGlobalContext, Permission } from "@/contexts/GlobalContext";
-import { backend } from "@/lib/backend";
+import {
+  backend,
+  getReceipt,
+  getItems,
+  updateItem,
+  createItem,
+  deleteItem,
+} from "@/lib/backend";
+
+interface EditItemProps {
+  id: string | null;
+  index: number;
+  name: string;
+  quantity: string;
+  price: string;
+  edited: boolean;
+  deleted: boolean;
+}
 
 export default function EditReceiptPage({
   params,
@@ -21,7 +38,7 @@ export default function EditReceiptPage({
 }) {
   const { user, invalid_token, getPermission } = useGlobalContext();
   const [loading, setLoading] = useState(true);
-  const [receiptItems, setReceiptItems] = useState([]);
+  const [receiptItems, setReceiptItems] = useState<EditItemProps[]>([]);
   const [sharedCharges, setSharedCharges] = useState({
     value: "0.00",
     edited: false,
@@ -31,7 +48,7 @@ export default function EditReceiptPage({
 
   useEffect(() => {
     if (!user) {
-      // set loading
+      setLoading(true);
     } else if (invalid_token) {
       router.push(`/user?receiptid=${params.receiptid}&page=editreceipt`);
     } else {
@@ -43,15 +60,15 @@ export default function EditReceiptPage({
     }
 
     setLoading(true);
-    backend("GET", `/receipt/${params.receiptid}`).then((resp) => {
-      const receipt = resp.data;
-      setSharedCharges({ value: receipt.shared_cost, edited: false });
+
+    getReceipt(params.receiptid).then((data) => {
+      setSharedCharges({ value: data.shared_cost, edited: false });
     });
 
-    backend("GET", `/receipt/${params.receiptid}/item`).then((resp) => {
+    getItems(params.receiptid).then((data) => {
       const items = [];
       let ct = counter;
-      for (const item of resp.data) {
+      for (const item of data) {
         items.push({
           id: item.id,
           index: ct,
@@ -67,16 +84,23 @@ export default function EditReceiptPage({
       setReceiptItems(items);
       setLoading(false);
     });
-  }, [user, invalid_token]);
+  }, [user, invalid_token, params.receiptid, counter, router, getPermission]);
 
-  const setItemProp = (index: number, field: string) => (value) => {
-    const newReceiptItems = [...receiptItems];
-    newReceiptItems[index][field] = value;
-    newReceiptItems[index].edited = true;
-    setReceiptItems(newReceiptItems);
-  };
+  const setItemProp =
+    (index: number, field: keyof EditItemProps) => (value: string | number) => {
+      const newReceiptItems = [...receiptItems];
+      if (field === "index") {
+        newReceiptItems[index][field] = value as number;
+      } else if (field === "edited" || field === "deleted") {
+        newReceiptItems[index][field] = Boolean(value);
+      } else {
+        newReceiptItems[index][field] = value.toString();
+      }
+      newReceiptItems[index].edited = true;
+      setReceiptItems(newReceiptItems);
+    };
 
-  const deleteItem = (index) => {
+  const removeItem = (index: number) => {
     if (receiptItems.length > 1) {
       const newReceiptItems = [...receiptItems];
       const item = newReceiptItems[index];
@@ -91,8 +115,8 @@ export default function EditReceiptPage({
       id: null,
       index: counter,
       name: "",
-      quantity: 1,
-      price: 0,
+      quantity: "1",
+      price: "0",
       edited: false,
       deleted: false,
     });
@@ -107,7 +131,7 @@ export default function EditReceiptPage({
       .forEach((item) => {
         total += parseInt(item.quantity) * parseFloat(item.price);
       });
-    return total.toFixed(2);
+    return total;
   };
 
   const handleSaveEdits = async () => {
@@ -118,25 +142,21 @@ export default function EditReceiptPage({
       if (item.id && item.edited) {
         edited = true;
         promises.push(
-          backend("PUT", `/receipt/${params.receiptid}/item/${item.id}`, {
-            name: item.name,
-            quantity: item.quantity,
-            price: item.price,
-          })
+          updateItem(
+            params.receiptid,
+            item.id,
+            item.name,
+            item.quantity,
+            item.price
+          )
         );
       } else if (item.id && item.deleted) {
         edited = true;
-        promises.push(
-          backend("DELETE", `/receipt/${params.receiptid}/item/${item.id}`)
-        );
+        promises.push(deleteItem(params.receiptid, item.id));
       } else if (!item.id) {
         edited = true;
         promises.push(
-          backend("POST", `/receipt/${params.receiptid}/item`, {
-            name: item.name,
-            quantity: item.quantity,
-            price: item.price,
-          })
+          createItem(params.receiptid, item.name, item.quantity, item.price)
         );
       }
     }
@@ -144,7 +164,7 @@ export default function EditReceiptPage({
       promises.push(
         backend("PUT", `/receipt/${params.receiptid}`, {
           shared_cost: sharedCharges.value,
-          grand_total: calculateTotal(),
+          grand_total: calculateTotal().toFixed(2),
         })
       );
     }
@@ -182,20 +202,18 @@ export default function EditReceiptPage({
                   </div>
                   <div className="col-span-2 flex justify-center items-center">
                     <QuantityInput
-                      placeholder="Quantity"
-                      value={item.quantity}
+                      value={parseInt(item.quantity)}
                       setValue={setItemProp(item.index, "quantity")}
                     />
                   </div>
                   <div className="col-span-2 flex justify-center items-center">
                     <PriceInput
-                      placeholder="Price"
                       value={item.price}
                       setValue={setItemProp(item.index, "price")}
                     />
                   </div>
                   <button
-                    onClick={() => deleteItem(item.index)}
+                    onClick={() => removeItem(item.index)}
                     className="col-span-1 flex justify-center items-center transition-transform duration-200 active:scale-90"
                   >
                     <i className="fas fa-trash text-midgray"></i>
@@ -224,7 +242,6 @@ export default function EditReceiptPage({
             <div className="col-span-2"></div>
             <div className="col-span-2 flex justify-center items-center">
               <PriceInput
-                placeholder="Price"
                 value={sharedCharges.value}
                 setValue={(value) => setSharedCharges({ value, edited: true })}
               />

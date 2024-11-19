@@ -10,11 +10,11 @@ import QuantityInput from "@/components/QuantityInput";
 import ModifyButton from "@/components/ModifyButton";
 import StickyButton from "@/components/StickyButton";
 import { useGlobalContext, Permission } from "@/contexts/GlobalContext";
-import { backend } from "@/lib/backend";
+import { backend, getItems } from "@/lib/backend";
 
 type AccordionItemProps = {
   item: {
-    id: number;
+    id: string;
     name: string;
     quantity: string;
     price: string;
@@ -74,7 +74,10 @@ const AccordionItem: React.FC<AccordionItemProps> = ({
                 </Text>
               </div>
               <div className="col-span-2">
-                <QuantityInput value={item.quantity} setValue={setQuantity} />
+                <QuantityInput
+                  value={parseInt(item.quantity)}
+                  setValue={setQuantity}
+                />
               </div>
             </div>
             <div className="col-span-8 grid grid-cols-8 items-center">
@@ -88,7 +91,10 @@ const AccordionItem: React.FC<AccordionItemProps> = ({
                 </Text>
               </div>
               <div className="col-span-2">
-                <QuantityInput value={item.split} setValue={setSplit} />
+                <QuantityInput
+                  value={parseInt(item.split)}
+                  setValue={setSplit}
+                />
               </div>
             </div>
           </div>
@@ -98,13 +104,21 @@ const AccordionItem: React.FC<AccordionItemProps> = ({
   );
 };
 
+interface AdjustmentReceiptItem {
+  id: string;
+  name: string;
+  quantity: string;
+  price: string;
+  split: string;
+}
+
 export default function AdjustmentsPage({
   params,
 }: {
   params: { receiptid: string };
 }) {
   const { user, invalid_token, getPermission } = useGlobalContext();
-  const [receiptItems, setReceiptItems] = useState([]);
+  const [receiptItems, setReceiptItems] = useState<AdjustmentReceiptItem[]>([]);
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -121,9 +135,9 @@ export default function AdjustmentsPage({
       });
     }
 
-    backend("GET", `/receipt/${params.receiptid}/item`).then((data) => {
+    getItems(params.receiptid).then((data) => {
       let items = [];
-      for (const item of data.data) {
+      for (const item of data) {
         items.push({
           id: item.id,
           name: item.name,
@@ -148,11 +162,13 @@ export default function AdjustmentsPage({
     searchParams,
   ]);
 
-  const setItemProp = (index: number, field: string) => (value) => {
-    const newTextBoxes = [...receiptItems];
-    newTextBoxes[index][field] = value;
-    setReceiptItems(newTextBoxes);
-  };
+  const setItemProp =
+    (index: number, field: keyof AdjustmentReceiptItem) =>
+    (value: string | number) => {
+      const newReceiptItems = [...receiptItems];
+      newReceiptItems[index][field] = value.toString();
+      setReceiptItems(newReceiptItems);
+    };
 
   const handleSaveSelections = async () => {
     if (!user) {

@@ -94,8 +94,8 @@ export default function ConsumerDashboard({
               <ConsumerBreakdown
                 consumer="John Doe"
                 items={[
-                  { item: "Item 1", quantity: 2, split: 3, price: 10 },
-                  { item: "Item 2", quantity: 1, split: 2, price: 20 },
+                  { name: "Item 1", quantity: 2, split: 3, price: 10 },
+                  { name: "Item 2", quantity: 1, split: 2, price: 20 },
                 ]}
                 sharedCost={10}
                 isHost
@@ -105,8 +105,8 @@ export default function ConsumerDashboard({
               <ConsumerBreakdown
                 consumer="manas dhal"
                 items={[
-                  { item: "Item 1", quantity: 2, split: 3, price: 10 },
-                  { item: "Item 2", quantity: 1, split: 2, price: 20 },
+                  { name: "Item 1", quantity: 2, split: 3, price: 10 },
+                  { name: "Item 2", quantity: 1, split: 2, price: 20 },
                 ]}
                 sharedCost={10}
               />

@@ -19,7 +19,7 @@ const ConsumerBreakdown: React.FC<ConsumerBreakdownProps> = ({
   sharedCost,
   isHost = false,
 }) => {
-  const calculateShare = (quantity, split, price) => {
+  const calculateShare = (quantity: number, split: number, price: number) => {
     return (price * quantity) / split;
   };
 
@@ -39,15 +39,10 @@ const ConsumerBreakdown: React.FC<ConsumerBreakdownProps> = ({
         <Text type="body_bold" className="text-midgray">
           $
           {(
-            parseFloat(sharedCost) +
+            sharedCost +
             items.reduce(
               (acc, item) =>
-                acc +
-                calculateShare(
-                  parseInt(item.quantity),
-                  parseInt(item.split),
-                  parseFloat(item.price)
-                ),
+                acc + calculateShare(item.quantity, item.split, item.price),
               0
             )
           ).toFixed(2)}
@@ -60,11 +55,7 @@ const ConsumerBreakdown: React.FC<ConsumerBreakdownProps> = ({
             {item.split > 1 ? ` / ${item.split}` : null}
           </Text>
           <Text className="text-midgray">
-            {calculateShare(
-              parseInt(item.quantity),
-              parseInt(item.split),
-              parseFloat(item.price)
-            ).toFixed(2)}
+            {calculateShare(item.quantity, item.split, item.price).toFixed(2)}
           </Text>
         </div>
       ))}

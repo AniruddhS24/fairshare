@@ -10,7 +10,31 @@ import LineItem from "@/components/LineItem";
 import ConsumerBreakdown from "@/components/ConsumerBreakdown";
 import ItemBreakdown from "@/components/ItemBreakdown";
 import { useGlobalContext, Permission } from "@/contexts/GlobalContext";
-import { backend } from "@/lib/backend";
+import {
+  getParticipants,
+  getReceipt,
+  getItems,
+  getSplits,
+  User,
+} from "@/lib/backend";
+
+interface ReceiptItem {
+  name: string;
+  quantity: string;
+  price: string;
+  consumers: string[];
+}
+
+interface ConsumerItem {
+  name: string;
+  items: {
+    name: string;
+    quantity: number;
+    split: number;
+    price: number;
+  }[];
+  host: boolean;
+}
 
 export default function HostDashboard({
   params,
@@ -19,53 +43,15 @@ export default function HostDashboard({
 }) {
   const { user, invalid_token, getPermission } = useGlobalContext();
   const [selectedTab, setSelectedTab] = useState(0);
-  const [receiptItems, setReceiptItems] = useState([]);
-  const [consumerItems, setConsumerItems] = useState([]);
+  const [receiptItems, setReceiptItems] = useState<ReceiptItem[]>([]);
+  const [consumerItems, setConsumerItems] = useState<ConsumerItem[]>([]);
   const [numConsumers, setNumConsumers] = useState(0);
-  const [sharedCost, setSharedCost] = useState(0.0);
+  const [sharedCost, setSharedCost] = useState<string>("0.0");
   const [totalCost, setTotalCost] = useState(0.0);
   const [isReminderPopupVisible, setIsReminderPopupVisible] = useState(false);
   const [reminderName, setReminderName] = useState("");
 
   const router = useRouter();
-
-  const fetchReceipt = async () => {
-    const resp = await backend("GET", `/receipt/${params.receiptid}`);
-    return resp.data;
-  };
-
-  const fetchUsers = async () => {
-    const resp = await backend(
-      "GET",
-      `/receipt/${params.receiptid}/participants`
-    );
-    const users = {};
-    for (const user of resp.data.hosts) {
-      users[user.id] = { ...user, host: true };
-    }
-    for (const user of resp.data.consumers) {
-      users[user.id] = { ...user, host: false };
-    }
-    return users;
-  };
-
-  const fetchItems = async () => {
-    const resp = await backend("GET", `/receipt/${params.receiptid}/item`);
-    const items = {};
-    for (const item of resp.data) {
-      items[item.id] = { ...item, consumers: [] };
-    }
-    return items;
-  };
-
-  const fetchSplits = async () => {
-    const resp = await backend("GET", `/receipt/${params.receiptid}/split`);
-    const splits = [];
-    for (const split of resp.data) {
-      splits.push(split);
-    }
-    return splits;
-  };
 
   useEffect(() => {
     if (!user) {
@@ -80,23 +66,70 @@ export default function HostDashboard({
       });
     }
 
+    const fetchReceipt = async () => {
+      return await getReceipt(params.receiptid);
+    };
+
+    const fetchUsers = async () => {
+      const participants = await getParticipants(params.receiptid);
+      const users: { [key: string]: User & { host: boolean } } = {};
+      for (const user of participants.hosts) {
+        users[user.id] = { ...user, host: true };
+      }
+      for (const user of participants.consumers) {
+        users[user.id] = { ...user, host: false };
+      }
+      return users;
+    };
+
+    const fetchItems = async () => {
+      return await getItems(params.receiptid);
+    };
+
+    const fetchSplits = async () => {
+      const receipt_splits = await getSplits(params.receiptid);
+      const splits = [];
+      for (const split of receipt_splits) {
+        splits.push(split);
+      }
+      return splits;
+    };
+
     const fetchData = async () => {
-      const [receipt, user_map, split_map, item_map] = await Promise.all([
+      const [receipt, user_map, split_map, items] = await Promise.all([
         fetchReceipt(),
         fetchUsers(),
         fetchSplits(),
         fetchItems(),
       ]);
-      const receipt_items = {};
-      const consumer_items = {};
+      const receipt_items: {
+        [key: string]: {
+          name: string;
+          quantity: string;
+          price: string;
+          consumers: string[];
+        };
+      } = {};
+      const consumer_items: {
+        [key: string]: {
+          name: string;
+          items: {
+            name: string;
+            quantity: number;
+            split: number;
+            price: number;
+          }[];
+          host: boolean;
+        };
+      } = {};
       let total_cost = 0.0;
 
-      for (const item_id in item_map) {
-        total_cost += item_map[item_id].quantity * item_map[item_id].price;
-        receipt_items[item_id] = {
-          name: item_map[item_id].name,
-          quantity: parseInt(item_map[item_id].quantity),
-          price: parseFloat(item_map[item_id].price),
+      for (const item of items) {
+        total_cost += parseInt(item.quantity) * parseFloat(item.price);
+        receipt_items[item.id] = {
+          name: item.name,
+          quantity: item.quantity,
+          price: item.price,
           consumers: [],
         };
       }
@@ -109,7 +142,7 @@ export default function HostDashboard({
         };
       }
 
-      const automatic_split = {};
+      const automatic_split: { [key: string]: number } = {};
       for (const split of split_map) {
         if (automatic_split.hasOwnProperty(split.item_id)) {
           automatic_split[split.item_id] += 1;
@@ -117,7 +150,7 @@ export default function HostDashboard({
           automatic_split[split.item_id] = 1;
         }
       }
-      for (const item_id in item_map) {
+      for (const item_id in receipt_items) {
         if (!automatic_split.hasOwnProperty(item_id)) {
           automatic_split[item_id] = Object.keys(user_map).length;
         }
@@ -125,15 +158,17 @@ export default function HostDashboard({
 
       for (const split of split_map) {
         const split_amount =
-          split.split == "None" ? automatic_split[split.item_id] : split.split;
+          split.split == "None"
+            ? automatic_split[split.item_id].toString()
+            : split.split;
         receipt_items[split.item_id].consumers.push(
           user_map[split.user_id].name
         );
         consumer_items[split.user_id].items.push({
-          name: item_map[split.item_id].name,
+          name: receipt_items[split.item_id].name,
           quantity: parseInt(split.quantity),
           split: parseInt(split_amount),
-          price: parseFloat(item_map[split.item_id].price),
+          price: parseFloat(receipt_items[split.item_id].price),
         });
       }
 
@@ -145,13 +180,13 @@ export default function HostDashboard({
     };
 
     fetchData();
-  }, [user, invalid_token]);
+  }, [user, invalid_token, params.receiptid, router, getPermission]);
 
   const markSettled = () => {
     alert("TODO");
   };
 
-  const handleReminder = (name) => {
+  const handleReminder = (name: string) => {
     setIsReminderPopupVisible(true);
     setReminderName(name);
   };
@@ -211,15 +246,15 @@ export default function HostDashboard({
               <div key={index} className="w-full mb-4">
                 <ItemBreakdown
                   name={item.name}
-                  quantity={item.quantity}
-                  price={item.price}
+                  quantity={parseInt(item.quantity)}
+                  price={parseFloat(item.price)}
                   consumers={item.consumers}
                 />
               </div>
             ))}
             <LineItem
               label="Shared Charges"
-              price={sharedCost}
+              price={parseFloat(sharedCost)}
               labelColor="text-primary"
               bold
             />
@@ -244,7 +279,7 @@ export default function HostDashboard({
                   <ConsumerBreakdown
                     consumer={item.name}
                     items={item.items}
-                    sharedCost={sharedCost / numConsumers}
+                    sharedCost={parseFloat(sharedCost) / numConsumers}
                     isHost
                   />
                 </div>
@@ -277,7 +312,7 @@ export default function HostDashboard({
                     <ConsumerBreakdown
                       consumer={item.name}
                       items={item.items}
-                      sharedCost={sharedCost / numConsumers}
+                      sharedCost={parseFloat(sharedCost) / numConsumers}
                     />
                   </div>
                 </div>

@@ -45,6 +45,7 @@ function UserOnboardingPage() {
 
   const handleNext = async () => {
     const userData = {
+      id: null,
       name: name,
       phone: phoneNumber,
     };

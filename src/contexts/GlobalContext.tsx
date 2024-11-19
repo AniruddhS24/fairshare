@@ -7,10 +7,10 @@ import React, {
   ReactNode,
   useEffect,
 } from "react";
-import { backend } from "@/lib/backend";
+import { createJWTToken, getUserFromJWT, getUserRole } from "@/lib/backend";
 
 interface User {
-  id: string;
+  id: string | null;
   name: string;
   phone: string;
 }
@@ -47,14 +47,14 @@ export const GlobalProvider = ({ children }: { children: ReactNode }) => {
     const jwt = localStorage.getItem("jwt");
     if (jwt) {
       console.log(jwt);
-      backend("GET", "/token")
+      getUserFromJWT()
         .then((data) => {
-          const user = data.data;
           setInvalidToken(false);
-          setUser({ id: user.id, name: user.name, phone: user.phone });
-          console.log(`User logged in: ${user.name}`);
+          setUser({ id: data.id, name: data.name, phone: data.phone });
+          console.log(`User logged in: ${data.name}`);
         })
         .catch(() => {
+          // TODO: Check error logic, not right
           console.log("Invalid token");
           setInvalidToken(true);
           localStorage.removeItem("jwt");
@@ -67,8 +67,8 @@ export const GlobalProvider = ({ children }: { children: ReactNode }) => {
 
   const getPermission = async (receiptId: string): Promise<Permission> => {
     try {
-      const resp = await backend("GET", `/receipt/${receiptId}/role`);
-      const permission = resp.data.role;
+      const role = await getUserRole(receiptId);
+      const permission = role.role;
       if (permission === "host") {
         return Permission.HOST;
       } else if (permission === "consumer") {
@@ -83,7 +83,7 @@ export const GlobalProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const login = async (userData: User) => {
-    const resp = await backend("POST", "/token", userData);
+    const resp = await createJWTToken(userData.name, userData.phone);
     localStorage.setItem("jwt", resp.token);
   };
 
