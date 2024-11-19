@@ -180,7 +180,7 @@ export default function HostDashboard({
     };
 
     fetchData();
-  }, [user, invalid_token, params.receiptid, router, getPermission]);
+  }, [invalid_token]);
 
   const markSettled = () => {
     alert("TODO");

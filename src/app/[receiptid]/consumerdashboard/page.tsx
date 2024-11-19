@@ -36,7 +36,7 @@ export default function ConsumerDashboard({
     }
 
     // setReceiptItems(dummyGetReceiptItems(params.receiptid));
-  }, [user, invalid_token]);
+  }, [invalid_token]);
 
   const markSettled = () => {
     alert("TODO");

@@ -153,14 +153,7 @@ export default function AdjustmentsPage({
       }
       setReceiptItems(items);
     });
-  }, [
-    user,
-    invalid_token,
-    getPermission,
-    params.receiptid,
-    router,
-    searchParams,
-  ]);
+  }, [invalid_token]);
 
   const setItemProp =
     (index: number, field: keyof AdjustmentReceiptItem) =>

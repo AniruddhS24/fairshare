@@ -5,6 +5,7 @@ export async function backend<T>(
   endpoint: string,
   body: unknown = null
 ): Promise<T> {
+  console.log(method, endpoint, body);
   const token = localStorage.getItem("jwt");
   try {
     const response = await fetch(`${apiUrl}${endpoint}`, {
@@ -21,15 +22,16 @@ export async function backend<T>(
     });
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.message || "Request failed");
+      throw new Error(errorData.error || "Request failed");
     }
     const response_body = await response.json();
     if ("message" in response_body) {
-      console.log(response_body.message);
+      //console.log(response_body.message);
     }
     if ("data" in response_body) {
       return response_body.data;
     }
+    console.log(response_body);
     return response_body;
   } catch (error) {
     console.log(method);
@@ -47,7 +49,7 @@ interface Receipt {
 }
 
 export async function getReceipt(receiptid: string): Promise<Receipt> {
-  return await backend("GET", `/receipts/${receiptid}`);
+  return await backend("GET", `/receipt/${receiptid}`);
 }
 
 export async function updateReceipt(
@@ -85,7 +87,7 @@ export interface Item {
 }
 
 export async function getItems(receiptid: string): Promise<Item[]> {
-  return await backend("GET", `/receipts/${receiptid}/item`);
+  return await backend("GET", `/receipt/${receiptid}/item`);
 }
 
 export async function createItem(
@@ -94,7 +96,7 @@ export async function createItem(
   quantity: string,
   price: string
 ): Promise<Item> {
-  return await backend("POST", `/receipts/${receiptid}/item`, {
+  return await backend("POST", `/receipt/${receiptid}/item`, {
     name,
     quantity,
     price,
@@ -133,7 +135,7 @@ interface Split {
 }
 
 export async function getSplits(receiptid: string): Promise<Split[]> {
-  return await backend("GET", `/receipts/${receiptid}/split`);
+  return await backend("GET", `/receipt/${receiptid}/split`);
 }
 
 export async function createSplit(
@@ -142,7 +144,7 @@ export async function createSplit(
   split: string,
   item_id: string
 ): Promise<Split> {
-  return await backend("POST", `/receipts/${receiptid}/split`, {
+  return await backend("POST", `/receipt/${receiptid}/split`, {
     quantity,
     split,
     item_id,
@@ -164,14 +166,14 @@ interface Role {
 }
 
 export async function getUserRole(receiptid: string): Promise<Role> {
-  return await backend("GET", `/receipts/${receiptid}/role`);
+  return await backend("GET", `/receipt/${receiptid}/role`);
 }
 
 export async function createRole(
   receiptid: string,
   role: string
 ): Promise<Role> {
-  return await backend("POST", `/receipts/${receiptid}/role`, { role });
+  return await backend("POST", `/receipt/${receiptid}/role`, { role });
 }
 
 export async function createJWTToken(
@@ -188,5 +190,5 @@ export async function getUserFromJWT(): Promise<User> {
 export async function getParticipants(
   receiptid: string
 ): Promise<{ hosts: User[]; consumers: User[] }> {
-  return await backend("GET", `/receipts/${receiptid}/participants`);
+  return await backend("GET", `/receipt/${receiptid}/participants`);
 }
