@@ -16,7 +16,7 @@ export default function Home() {
     } else {
       router.push(`/user`);
     }
-  }, [status]);
+  }, [status, router]);
 
   return (
     <div className="h-full flex flex-col items-center justify-start bg-white px-5"></div>

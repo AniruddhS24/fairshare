@@ -58,7 +58,7 @@ export default function SplitPage({
       }
       setReceiptItems(items);
     });
-  }, [status]);
+  }, [status, params.receiptid, router]);
 
   const setChecked = (index: number) => {
     const newItems = [...receiptItems];

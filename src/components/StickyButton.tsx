@@ -6,12 +6,14 @@ interface StickyButtonProps {
   label: string;
   onClick: () => void;
   sticky?: boolean; // Prop to determine if the button should be sticky
+  disabled?: boolean; // Prop to determine if the button should be disabled
 }
 
 const StickyButton: React.FC<StickyButtonProps> = ({
   label,
   onClick,
   sticky = false,
+  disabled = false,
 }) => {
   const [loading, setLoading] = React.useState(false);
 
@@ -37,7 +39,8 @@ const StickyButton: React.FC<StickyButtonProps> = ({
         sticky
           ? "fixed bottom-4 left-1/2 transform -translate-x-1/2 z-10 max-w-[90%]"
           : ""
-      }`}
+      } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
+      disabled={disabled}
     >
       <Text type="s_heading" className="text-white">
         {label}

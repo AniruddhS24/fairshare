@@ -34,7 +34,7 @@ export default function ShareReceiptPage({
         }
       });
     }
-  }, [status]);
+  }, [status, params.receiptid, router]);
 
   const handleShare = async () => {
     if (navigator.share) {

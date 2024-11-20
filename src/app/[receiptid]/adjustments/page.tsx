@@ -160,7 +160,7 @@ export default function AdjustmentsPage({
       }
       setReceiptItems(items);
     });
-  }, [status]);
+  }, [status, params.receiptid]);
 
   const setItemProp =
     (index: number, field: keyof AdjustmentReceiptItem) =>

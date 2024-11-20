@@ -187,7 +187,7 @@ export default function HostDashboard({
     };
 
     fetchData();
-  }, [status]);
+  }, [status, params.receiptid, router]);
 
   const markSettled = () => {
     alert("TODO");

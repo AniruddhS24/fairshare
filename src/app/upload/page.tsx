@@ -30,7 +30,7 @@ export default function UploadReceiptPage() {
     } else if (status === AuthStatus.UNAUTHORIZED) {
       router.push(`/unauthorized`);
     }
-  }, [status]);
+  }, [status, router]);
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files ? event.target.files[0] : null;

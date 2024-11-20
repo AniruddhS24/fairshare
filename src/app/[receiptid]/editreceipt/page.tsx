@@ -91,7 +91,7 @@ export default function EditReceiptPage({
       setReceiptItems(items);
       setLoading(false);
     });
-  }, [status]);
+  }, [status, params.receiptid, router]);
 
   const setItemProp =
     (index: number, field: keyof EditItemProps) => (value: string | number) => {

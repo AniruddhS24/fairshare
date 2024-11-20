@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import Text from "../../components/Text";
 import TextInput from "../../components/TextInput";
 import PhoneInput from "../../components/PhoneInput";
@@ -8,6 +8,7 @@ import StickyButton from "../../components/StickyButton";
 import Image from "next/image";
 import Spacer from "@/components/Spacer";
 import Container from "@/components/Container";
+import Spinner from "@/components/Spinner";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   useGlobalContext,
@@ -20,32 +21,39 @@ function UserOnboardingPage() {
   const { status, login } = useGlobalContext();
   const searchParams = useSearchParams();
   const router = useRouter();
+  const [loading, setLoading] = useState(false);
   const [name, setName] = useState<string>("");
-  // const [venmoHandle, setVenmoHandle] = useState<string>("");
   const [phoneNumber, setPhoneNumber] = useState<string>("");
 
-  const goToPage = () => {
-    if (searchParams.has("receiptid")) {
-      const receipt_id = searchParams.get("receiptid");
-      if (searchParams.has("onboardConsumer")) {
+  const receipt_id = searchParams.get("receiptid");
+  const onboardConsumer = searchParams.get("onboardConsumer");
+  const page = searchParams.get("page");
+
+  const goToPage = useCallback(() => {
+    if (receipt_id) {
+      if (onboardConsumer) {
         backend("POST", `/receipt/${receipt_id}/role`, {
           role: Permission.CONSUMER,
         }).then(() => {
           router.push(`/${receipt_id}/split`);
         });
-      } else if (searchParams.has("page")) {
-        router.push(`/${receipt_id}/${searchParams.get("page")}`);
+      } else if (page) {
+        router.push(`/${receipt_id}/${page}`);
       }
     } else {
       router.push("/upload");
     }
-  };
+  }, [router, receipt_id, onboardConsumer, page]);
 
   useEffect(() => {
-    if (status === AuthStatus.AUTHORIZED) {
+    if (status === AuthStatus.CHECKING) {
+      setLoading(true);
+    } else if (status === AuthStatus.AUTHORIZED) {
       goToPage();
+    } else {
+      setLoading(false);
     }
-  }, [status]);
+  }, [status, goToPage]);
 
   const handleNext = async () => {
     const userData = {
@@ -57,7 +65,13 @@ function UserOnboardingPage() {
     goToPage();
   };
 
-  return (
+  const isNextDisabled = !name || !phoneNumber;
+
+  return loading ? (
+    <div className="flex w-full items-center justify-center">
+      <Spinner color="text-primary" />
+    </div>
+  ) : (
     <Container centered>
       <Spacer size="large" />
       <Image src="/logo.png" alt="Logo" width={250} height={100} />
@@ -88,6 +102,7 @@ function UserOnboardingPage() {
         onClick={() => {
           handleNext();
         }}
+        disabled={isNextDisabled}
       />
     </Container>
   );

@@ -43,7 +43,7 @@ export default function ConsumerDashboard({
     }
 
     // setReceiptItems(dummyGetReceiptItems(params.receiptid));
-  }, [status]);
+  }, [status, params.receiptid]);
 
   const markSettled = () => {
     alert("TODO");
