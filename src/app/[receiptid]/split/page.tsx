@@ -6,7 +6,12 @@ import Spacer from "@/components/Spacer";
 import Text from "../../../components/Text";
 import LineItem from "@/components/LineItem";
 import StickyButton from "@/components/StickyButton";
-import { useGlobalContext, Permission } from "@/contexts/GlobalContext";
+import Container from "@/components/Container";
+import {
+  useGlobalContext,
+  Permission,
+  AuthStatus,
+} from "@/contexts/GlobalContext";
 import { getItems } from "@/lib/backend";
 
 interface SplitItems {
@@ -22,15 +27,17 @@ export default function SplitPage({
 }: {
   params: { receiptid: string };
 }) {
-  const { user, invalid_token, getPermission } = useGlobalContext();
+  const { status, getPermission } = useGlobalContext();
   const [receiptItems, setReceiptItems] = useState<SplitItems[]>([]);
   const router = useRouter();
   useEffect(() => {
-    if (!user) {
-      // set loading
-    } else if (invalid_token) {
-      router.push(`/user?receiptid=${params.receiptid}&page=split`);
-    } else {
+    if (status === AuthStatus.CHECKING) {
+      return;
+    } else if (status === AuthStatus.NO_TOKEN) {
+      router.push(`/user?receiptid=${params.receiptid}&page=hostdashboard`);
+    } else if (status === AuthStatus.UNAUTHORIZED) {
+      router.push(`/unauthorized`);
+    } else if (status === AuthStatus.AUTHORIZED) {
       getPermission(params.receiptid).then((permission) => {
         if (permission === Permission.UNAUTHORIZED) {
           router.push(`/unauthorized`);
@@ -51,7 +58,7 @@ export default function SplitPage({
       }
       setReceiptItems(items);
     });
-  }, [invalid_token]);
+  }, [status]);
 
   const setChecked = (index: number) => {
     const newItems = [...receiptItems];
@@ -70,7 +77,7 @@ export default function SplitPage({
   };
 
   return (
-    <div className="h-full flex flex-col items-start justify-start bg-white px-2 pb-12">
+    <Container>
       <Spacer size="large" />
       <Text type="xl_heading" className="text-darkest">
         My Share
@@ -109,6 +116,6 @@ export default function SplitPage({
       </div>
       <Spacer size="medium" />
       <StickyButton label="Next" onClick={handleSaveSelections} sticky />
-    </div>
+    </Container>
   );
 }

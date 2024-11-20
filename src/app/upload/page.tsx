@@ -7,25 +7,30 @@ import Image from "next/image";
 import Spacer from "@/components/Spacer";
 import ModifyButton from "@/components/ModifyButton";
 import StickyButton from "@/components/StickyButton";
+import Container from "@/components/Container";
 import { useRouter } from "next/navigation";
-import { useGlobalContext, Permission } from "@/contexts/GlobalContext";
+import {
+  useGlobalContext,
+  Permission,
+  AuthStatus,
+} from "@/contexts/GlobalContext";
 import { backend, getUploadLink } from "@/lib/backend";
 
 export default function UploadReceiptPage() {
-  const { user, invalid_token } = useGlobalContext();
+  const { status } = useGlobalContext();
   const router = useRouter();
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
 
   useEffect(() => {
-    if (!user) {
-      // set loading
-    } else if (invalid_token) {
-      router.push("/user?redirect=upload");
-    } else {
-      // set loading
+    if (status === AuthStatus.CHECKING) {
+      return;
+    } else if (status === AuthStatus.NO_TOKEN) {
+      router.push(`/user?page=upload`);
+    } else if (status === AuthStatus.UNAUTHORIZED) {
+      router.push(`/unauthorized`);
     }
-  }, [invalid_token]);
+  }, [status]);
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files ? event.target.files[0] : null;
@@ -82,7 +87,7 @@ export default function UploadReceiptPage() {
   };
 
   return uploadedImage ? (
-    <div className="flex flex-col items-center justify-start px-5">
+    <Container centered>
       <Spacer size="large" />
       <Image src="/logo.png" alt="Logo" width={250} height={100} />
       <Spacer size="medium" />
@@ -106,9 +111,9 @@ export default function UploadReceiptPage() {
         }}
         sticky
       />
-    </div>
+    </Container>
   ) : (
-    <div className="flex flex-col items-center justify-start px-5">
+    <Container centered>
       <Spacer size="large" />
       <Image src="/logo.png" alt="Logo" width={250} height={100} />
       <Spacer size="large" />
@@ -145,6 +150,6 @@ export default function UploadReceiptPage() {
         className="hidden"
         onChange={handleFileUpload}
       />
-    </div>
+    </Container>
   );
 }

@@ -9,7 +9,12 @@ import Text from "../../../components/Text";
 import QuantityInput from "@/components/QuantityInput";
 import ModifyButton from "@/components/ModifyButton";
 import StickyButton from "@/components/StickyButton";
-import { useGlobalContext, Permission } from "@/contexts/GlobalContext";
+import Container from "@/components/Container";
+import {
+  useGlobalContext,
+  Permission,
+  AuthStatus,
+} from "@/contexts/GlobalContext";
 import { backend, getItems } from "@/lib/backend";
 
 type AccordionItemProps = {
@@ -117,17 +122,19 @@ export default function AdjustmentsPage({
 }: {
   params: { receiptid: string };
 }) {
-  const { user, invalid_token, getPermission } = useGlobalContext();
+  const { status, getPermission } = useGlobalContext();
   const [receiptItems, setReceiptItems] = useState<AdjustmentReceiptItem[]>([]);
   const searchParams = useSearchParams();
   const router = useRouter();
 
   useEffect(() => {
-    if (!user) {
-      // set loading
-    } else if (invalid_token) {
+    if (status === AuthStatus.CHECKING) {
+      return;
+    } else if (status === AuthStatus.NO_TOKEN) {
       router.push(`/user?receiptid=${params.receiptid}&page=adjustments`);
-    } else {
+    } else if (status === AuthStatus.UNAUTHORIZED) {
+      router.push(`/unauthorized`);
+    } else if (status === AuthStatus.AUTHORIZED) {
       getPermission(params.receiptid).then((permission) => {
         if (permission === Permission.UNAUTHORIZED) {
           router.push(`/unauthorized`);
@@ -153,7 +160,7 @@ export default function AdjustmentsPage({
       }
       setReceiptItems(items);
     });
-  }, [invalid_token]);
+  }, [status]);
 
   const setItemProp =
     (index: number, field: keyof AdjustmentReceiptItem) =>
@@ -164,9 +171,6 @@ export default function AdjustmentsPage({
     };
 
   const handleSaveSelections = async () => {
-    if (!user) {
-      return;
-    }
     const promises = [];
     for (const item of receiptItems) {
       promises.push(
@@ -185,11 +189,13 @@ export default function AdjustmentsPage({
       router.push(`/${params.receiptid}/share`);
     } else if (permission === Permission.CONSUMER) {
       router.push(`/${params.receiptid}/done`);
+    } else {
+      router.push(`/unauthorized`);
     }
   };
 
   return (
-    <div className="h-full flex flex-col items-start justify-start bg-white px-2 pb-12">
+    <Container>
       <Spacer size="large" />
       <div className="flex items-center w-full">
         <Text type="xl_heading" className="text-darkest">
@@ -224,6 +230,6 @@ export default function AdjustmentsPage({
       </div>
       <Spacer size="medium" />
       <StickyButton label="Next" onClick={handleSaveSelections} sticky />
-    </div>
+    </Container>
   );
 }

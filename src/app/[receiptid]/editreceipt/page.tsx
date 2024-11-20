@@ -11,7 +11,12 @@ import ModifyButton from "@/components/ModifyButton";
 import LineItem from "@/components/LineItem";
 import StickyButton from "@/components/StickyButton";
 import Spinner from "@/components/Spinner";
-import { useGlobalContext, Permission } from "@/contexts/GlobalContext";
+import Container from "@/components/Container";
+import {
+  useGlobalContext,
+  AuthStatus,
+  Permission,
+} from "@/contexts/GlobalContext";
 import {
   backend,
   getReceipt,
@@ -36,7 +41,7 @@ export default function EditReceiptPage({
 }: {
   params: { receiptid: string };
 }) {
-  const { user, invalid_token, getPermission } = useGlobalContext();
+  const { status, getPermission } = useGlobalContext();
   const [loading, setLoading] = useState(true);
   const [receiptItems, setReceiptItems] = useState<EditItemProps[]>([]);
   const [sharedCharges, setSharedCharges] = useState({
@@ -47,11 +52,13 @@ export default function EditReceiptPage({
   const router = useRouter();
 
   useEffect(() => {
-    if (!user) {
-      setLoading(true);
-    } else if (invalid_token) {
+    if (status === AuthStatus.CHECKING) {
+      return;
+    } else if (status === AuthStatus.NO_TOKEN) {
       router.push(`/user?receiptid=${params.receiptid}&page=editreceipt`);
-    } else {
+    } else if (status === AuthStatus.UNAUTHORIZED) {
+      router.push(`/unauthorized`);
+    } else if (status === AuthStatus.AUTHORIZED) {
       getPermission(params.receiptid).then((permission) => {
         if (permission === Permission.UNAUTHORIZED) {
           router.push(`/unauthorized`);
@@ -84,7 +91,7 @@ export default function EditReceiptPage({
       setReceiptItems(items);
       setLoading(false);
     });
-  }, [invalid_token]);
+  }, [status]);
 
   const setItemProp =
     (index: number, field: keyof EditItemProps) => (value: string | number) => {
@@ -173,7 +180,7 @@ export default function EditReceiptPage({
   };
 
   return (
-    <div className="h-full flex flex-col items-start justify-start bg-white px-2 pb-12">
+    <Container>
       <Spacer size="large" />
       <Text type="xl_heading" className="text-darkest">
         Edit Receipt
@@ -268,6 +275,6 @@ export default function EditReceiptPage({
           <Spinner color="text-primary" />
         </div>
       )}
-    </div>
+    </Container>
   );
 }

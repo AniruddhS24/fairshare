@@ -4,30 +4,37 @@ import { useEffect } from "react";
 import Text from "@/components/Text";
 import SquareButton from "@/components/SquareButton";
 import Spacer from "@/components/Spacer";
+import Container from "@/components/Container";
 import { useRouter } from "next/navigation";
-import { useGlobalContext, Permission } from "@/contexts/GlobalContext";
+import {
+  useGlobalContext,
+  AuthStatus,
+  Permission,
+} from "@/contexts/GlobalContext";
 
 export default function ShareReceiptPage({
   params,
 }: {
   params: { receiptid: string };
 }) {
-  const { user, invalid_token, getPermission } = useGlobalContext();
+  const { status, getPermission } = useGlobalContext();
   const router = useRouter();
 
   useEffect(() => {
-    if (!user) {
-      // set loading
-    } else if (invalid_token) {
+    if (status === AuthStatus.CHECKING) {
+      return;
+    } else if (status === AuthStatus.NO_TOKEN) {
       router.push(`/user?receiptid=${params.receiptid}&page=share`);
-    } else {
+    } else if (status === AuthStatus.UNAUTHORIZED) {
+      router.push(`/unauthorized`);
+    } else if (status === AuthStatus.AUTHORIZED) {
       getPermission(params.receiptid).then((permission) => {
         if (permission === Permission.UNAUTHORIZED) {
           router.push(`/unauthorized`);
         }
       });
     }
-  }, [invalid_token]);
+  }, [status]);
 
   const handleShare = async () => {
     if (navigator.share) {
@@ -51,7 +58,7 @@ export default function ShareReceiptPage({
   };
 
   return (
-    <div className="h-full flex flex-col items-start justify-start bg-white px-2 pb-12">
+    <Container>
       <Spacer size="large" />
       <Text type="xl_heading" className="text-darkest">
         Share and Settle
@@ -85,6 +92,6 @@ export default function ShareReceiptPage({
           onClick={handleDashboard}
         />
       </div>
-    </div>
+    </Container>
   );
 }

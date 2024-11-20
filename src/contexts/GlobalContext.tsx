@@ -21,9 +21,16 @@ export enum Permission {
   UNAUTHORIZED = "unauthorized",
 }
 
+export enum AuthStatus {
+  CHECKING = "checking", // Initial state when verifying JWT
+  AUTHORIZED = "authorized", // Valid JWT and user authenticated
+  UNAUTHORIZED = "unauthorized", // Invalid JWT
+  NO_TOKEN = "no_token", // No JWT found in storage
+}
+
 interface GlobalContextType {
   user: User | null;
-  invalid_token: boolean;
+  status: AuthStatus;
   login: (userData: User) => void;
   logout: () => void;
   getPermission: (receiptId: string) => Promise<Permission>;
@@ -41,7 +48,7 @@ export const useGlobalContext = () => {
 
 export const GlobalProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [invalid_token, setInvalidToken] = useState(false);
+  const [status, setStatus] = useState<AuthStatus>(AuthStatus.CHECKING);
 
   useEffect(() => {
     const jwt = localStorage.getItem("jwt");
@@ -49,19 +56,17 @@ export const GlobalProvider = ({ children }: { children: ReactNode }) => {
       console.log(jwt);
       getUserFromJWT()
         .then((data) => {
-          setInvalidToken(false);
           setUser({ id: data.id, name: data.name, phone: data.phone });
-          console.log(`User logged in: ${data.name}`);
+          console.log("User found:", data);
+          setStatus(AuthStatus.AUTHORIZED);
         })
         .catch(() => {
-          // TODO: Check error logic, not right
-          console.log("Invalid token");
-          setInvalidToken(true);
+          setStatus(AuthStatus.UNAUTHORIZED);
           localStorage.removeItem("jwt");
         });
     } else {
       console.log("No token found");
-      setInvalidToken(true);
+      setStatus(AuthStatus.NO_TOKEN);
     }
   }, []);
 
@@ -77,7 +82,7 @@ export const GlobalProvider = ({ children }: { children: ReactNode }) => {
         return Permission.UNAUTHORIZED;
       }
     } catch (error) {
-      console.error("There was a problem!", error);
+      console.error("There was a problem retrieving permissions:", error);
       return Permission.UNAUTHORIZED;
     }
   };
@@ -85,10 +90,12 @@ export const GlobalProvider = ({ children }: { children: ReactNode }) => {
   const login = async (userData: User) => {
     const resp = await createJWTToken(userData.name, userData.phone);
     localStorage.setItem("jwt", resp.token);
+    setStatus(AuthStatus.AUTHORIZED);
   };
 
   const logout = () => {
     localStorage.removeItem("jwt");
+    setStatus(AuthStatus.NO_TOKEN);
     setUser(null);
   };
 
@@ -96,7 +103,7 @@ export const GlobalProvider = ({ children }: { children: ReactNode }) => {
     <GlobalContext.Provider
       value={{
         user,
-        invalid_token,
+        status,
         login,
         logout,
         getPermission,

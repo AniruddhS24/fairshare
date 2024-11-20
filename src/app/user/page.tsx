@@ -7,12 +7,17 @@ import PhoneInput from "../../components/PhoneInput";
 import StickyButton from "../../components/StickyButton";
 import Image from "next/image";
 import Spacer from "@/components/Spacer";
+import Container from "@/components/Container";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useGlobalContext, Permission } from "@/contexts/GlobalContext";
+import {
+  useGlobalContext,
+  Permission,
+  AuthStatus,
+} from "@/contexts/GlobalContext";
 import { backend } from "@/lib/backend";
 
 function UserOnboardingPage() {
-  const { user, login } = useGlobalContext();
+  const { status, login } = useGlobalContext();
   const searchParams = useSearchParams();
   const router = useRouter();
   const [name, setName] = useState<string>("");
@@ -37,11 +42,10 @@ function UserOnboardingPage() {
   };
 
   useEffect(() => {
-    if (user) {
-      console.log(user);
+    if (status === AuthStatus.AUTHORIZED) {
       goToPage();
     }
-  }, [user]);
+  }, [status]);
 
   const handleNext = async () => {
     const userData = {
@@ -54,7 +58,7 @@ function UserOnboardingPage() {
   };
 
   return (
-    <div className="h-full flex flex-col items-center justify-start bg-white px-5">
+    <Container centered>
       <Spacer size="large" />
       <Image src="/logo.png" alt="Logo" width={250} height={100} />
       <Spacer size="large" />
@@ -85,7 +89,7 @@ function UserOnboardingPage() {
           handleNext();
         }}
       />
-    </div>
+    </Container>
   );
 }
 
