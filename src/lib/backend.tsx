@@ -1,4 +1,4 @@
-const apiUrl = "https://ztzl10kljk.execute-api.us-east-1.amazonaws.com/prod";
+const apiUrl = "https://foceompsmj.execute-api.us-east-1.amazonaws.com/prod";
 
 export async function backend<T>(
   method: "GET" | "POST" | "PUT" | "DELETE",
