@@ -7,6 +7,8 @@ import Text from "../../../components/Text";
 import LineItem from "@/components/LineItem";
 import StickyButton from "@/components/StickyButton";
 import Container from "@/components/Container";
+import Spinner from "@/components/Spinner";
+
 import {
   useGlobalContext,
   Permission,
@@ -29,8 +31,12 @@ export default function SplitPage({
 }) {
   const { status, getPermission } = useGlobalContext();
   const [receiptItems, setReceiptItems] = useState<SplitItems[]>([]);
+  const [loading, setLoading] = useState(true);
+
   const router = useRouter();
   useEffect(() => {
+    setLoading(true);
+
     if (status === AuthStatus.CHECKING) {
       return;
     } else if (status === AuthStatus.NO_TOKEN) {
@@ -44,10 +50,10 @@ export default function SplitPage({
         }
       });
     }
-
-    getItems(params.receiptid).then((data) => {
+    const fetchData = async () => {
       const items = [];
-      for (const item of data) {
+      const receipt_items = await getItems(params.receiptid);
+      for (const item of receipt_items) {
         items.push({
           id: item.id,
           name: item.name,
@@ -57,7 +63,9 @@ export default function SplitPage({
         });
       }
       setReceiptItems(items);
-    });
+    };
+
+    fetchData().then(() => setLoading(false));
   }, [status, params.receiptid, router]);
 
   const setChecked = (index: number) => {
@@ -87,35 +95,43 @@ export default function SplitPage({
         Tap the items you consumed then click next.
       </Text>
       <Spacer size="large" />
-      <div className="grid grid-cols-8 w-full">
-        {receiptItems.map((item, index) => (
-          <div
-            className={`col-span-8 grid grid-cols-8 items-center gap-x-1 gap-y-3 py-3 pr-3 cursor-pointer ${
-              receiptItems[index].isChecked ? "bg-accentlight" : ""
-            }`}
-            key={index}
-            onClick={() => setChecked(index)} // Trigger toggle on row click
-          >
-            <div className="col-span-1 flex justify-center items-center ">
-              <input
-                type="checkbox"
-                checked={receiptItems[index].isChecked}
-                onChange={(e) => e.stopPropagation()} // Prevent row click when clicking on checkbox
-                className="w-4 h-4 accent-primary"
-              />
-            </div>
-            <div className="col-span-7 flex justify-start items-center">
-              <LineItem
-                label={item.name}
-                price={parseFloat(item.price)}
-                labelColor="text-darkest"
-              />
-            </div>
+      {!loading ? (
+        <div className="w-full">
+          <div className="grid grid-cols-8 w-full">
+            {receiptItems.map((item, index) => (
+              <div
+                className={`col-span-8 grid grid-cols-8 items-center gap-x-1 gap-y-3 py-3 pr-3 cursor-pointer ${
+                  receiptItems[index].isChecked ? "bg-accentlight" : ""
+                }`}
+                key={index}
+                onClick={() => setChecked(index)} // Trigger toggle on row click
+              >
+                <div className="col-span-1 flex justify-center items-center ">
+                  <input
+                    type="checkbox"
+                    checked={receiptItems[index].isChecked}
+                    onChange={(e) => e.stopPropagation()} // Prevent row click when clicking on checkbox
+                    className="w-4 h-4 accent-primary"
+                  />
+                </div>
+                <div className="col-span-7 flex justify-start items-center">
+                  <LineItem
+                    label={item.name}
+                    price={parseFloat(item.price)}
+                    labelColor="text-darkest"
+                  />
+                </div>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
-      <Spacer size="medium" />
-      <StickyButton label="Next" onClick={handleSaveSelections} sticky />
+          <Spacer size="medium" />
+          <StickyButton label="Next" onClick={handleSaveSelections} sticky />
+        </div>
+      ) : (
+        <div className="flex w-full items-center justify-center">
+          <Spinner color="text-primary" />
+        </div>
+      )}
     </Container>
   );
 }

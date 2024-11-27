@@ -52,6 +52,8 @@ export default function EditReceiptPage({
   const router = useRouter();
 
   useEffect(() => {
+    setLoading(true);
+
     if (status === AuthStatus.CHECKING) {
       return;
     } else if (status === AuthStatus.NO_TOKEN) {
@@ -66,16 +68,14 @@ export default function EditReceiptPage({
       });
     }
 
-    setLoading(true);
+    const fetchData = async () => {
+      const receipt = await getReceipt(params.receiptid);
+      setSharedCharges({ value: receipt.shared_cost, edited: false });
 
-    getReceipt(params.receiptid).then((data) => {
-      setSharedCharges({ value: data.shared_cost, edited: false });
-    });
-
-    getItems(params.receiptid).then((data) => {
       const items = [];
       let ct = counter;
-      for (const item of data) {
+      const receipt_items = await getItems(params.receiptid);
+      for (const item of receipt_items) {
         items.push({
           id: item.id,
           index: ct,
@@ -89,8 +89,9 @@ export default function EditReceiptPage({
       }
       setCounter(ct);
       setReceiptItems(items);
-      setLoading(false);
-    });
+    };
+
+    fetchData().then(() => setLoading(false));
   }, [status, params.receiptid, router]);
 
   const setItemProp =
@@ -143,11 +144,14 @@ export default function EditReceiptPage({
 
   const handleSaveEdits = async () => {
     const data = receiptItems;
-    let edited = sharedCharges.edited;
+    let receipt_changed = sharedCharges.edited;
     const promises = [];
     for (const item of data) {
-      if (item.id && item.edited) {
-        edited = true;
+      if (item.id && item.deleted) {
+        receipt_changed = true;
+        promises.push(deleteItem(params.receiptid, item.id));
+      } else if (item.id && item.edited) {
+        receipt_changed = true;
         promises.push(
           updateItem(
             params.receiptid,
@@ -157,17 +161,14 @@ export default function EditReceiptPage({
             item.price
           )
         );
-      } else if (item.id && item.deleted) {
-        edited = true;
-        promises.push(deleteItem(params.receiptid, item.id));
       } else if (!item.id) {
-        edited = true;
+        receipt_changed = true;
         promises.push(
           createItem(params.receiptid, item.name, item.quantity, item.price)
         );
       }
     }
-    if (edited) {
+    if (receipt_changed) {
       promises.push(
         backend("PUT", `/receipt/${params.receiptid}`, {
           shared_cost: sharedCharges.value,

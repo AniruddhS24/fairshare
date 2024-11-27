@@ -10,12 +10,13 @@ import QuantityInput from "@/components/QuantityInput";
 import ModifyButton from "@/components/ModifyButton";
 import StickyButton from "@/components/StickyButton";
 import Container from "@/components/Container";
+import Spinner from "@/components/Spinner";
 import {
   useGlobalContext,
   Permission,
   AuthStatus,
 } from "@/contexts/GlobalContext";
-import { backend, getItems } from "@/lib/backend";
+import { getItems, getMySplits, createSplit, deleteSplit } from "@/lib/backend";
 
 type AccordionItemProps = {
   item: {
@@ -123,28 +124,33 @@ export default function AdjustmentsPage({
   params: { receiptid: string };
 }) {
   const { status, getPermission } = useGlobalContext();
+  const [loading, setLoading] = useState(false);
   const [receiptItems, setReceiptItems] = useState<AdjustmentReceiptItem[]>([]);
   const searchParams = useSearchParams();
   const router = useRouter();
+  const receipt_id = params.receiptid;
 
   useEffect(() => {
+    setLoading(true);
+
     if (status === AuthStatus.CHECKING) {
       return;
     } else if (status === AuthStatus.NO_TOKEN) {
-      router.push(`/user?receiptid=${params.receiptid}&page=adjustments`);
+      router.push(`/user?receiptid=${receipt_id}&page=adjustments`);
     } else if (status === AuthStatus.UNAUTHORIZED) {
       router.push(`/unauthorized`);
     } else if (status === AuthStatus.AUTHORIZED) {
-      getPermission(params.receiptid).then((permission) => {
+      getPermission(receipt_id).then((permission) => {
         if (permission === Permission.UNAUTHORIZED) {
           router.push(`/unauthorized`);
         }
       });
     }
 
-    getItems(params.receiptid).then((data) => {
+    const fetchData = async () => {
       let items = [];
-      for (const item of data) {
+      const receipt_items = await getItems(receipt_id);
+      for (const item of receipt_items) {
         items.push({
           id: item.id,
           name: item.name,
@@ -159,8 +165,10 @@ export default function AdjustmentsPage({
         items = items.filter((_, index) => onlyInclude.includes(index));
       }
       setReceiptItems(items);
-    });
-  }, [status, params.receiptid]);
+    };
+
+    fetchData().then(() => setLoading(false));
+  }, [status, receipt_id, router]);
 
   const setItemProp =
     (index: number, field: keyof AdjustmentReceiptItem) =>
@@ -172,23 +180,24 @@ export default function AdjustmentsPage({
 
   const handleSaveSelections = async () => {
     const promises = [];
+
+    const currentSplits = await getMySplits(receipt_id);
+    for (const split of currentSplits) {
+      promises.push(deleteSplit(receipt_id, split.id));
+    }
+
     for (const item of receiptItems) {
       promises.push(
-        backend("POST", `/receipt/${params.receiptid}/split`, {
-          quantity: item.quantity,
-          split: item.split == "" ? null : item.split,
-          item_id: item.id,
-        })
+        createSplit(receipt_id, item.id, item.quantity, item.split)
       );
     }
 
-    const permission = await getPermission(params.receiptid);
+    const permission = await getPermission(receipt_id);
     await Promise.all(promises);
-    console.log(permission);
     if (permission === Permission.HOST) {
-      router.push(`/${params.receiptid}/share`);
+      router.push(`/${receipt_id}/share`);
     } else if (permission === Permission.CONSUMER) {
-      router.push(`/${params.receiptid}/done`);
+      router.push(`/${receipt_id}/done`);
     } else {
       router.push(`/unauthorized`);
     }
@@ -218,18 +227,26 @@ export default function AdjustmentsPage({
         </Text>
       </Text>
       <Spacer size="large" />
-      <div className="grid grid-cols-8 w-full">
-        {receiptItems.map((item, index) => (
-          <AccordionItem
-            key={index}
-            item={item}
-            setQuantity={setItemProp(index, "quantity")}
-            setSplit={setItemProp(index, "split")}
-          />
-        ))}
-      </div>
-      <Spacer size="medium" />
-      <StickyButton label="Next" onClick={handleSaveSelections} sticky />
+      {!loading ? (
+        <div className="w-full">
+          <div className="grid grid-cols-8 w-full">
+            {receiptItems.map((item, index) => (
+              <AccordionItem
+                key={index}
+                item={item}
+                setQuantity={setItemProp(index, "quantity")}
+                setSplit={setItemProp(index, "split")}
+              />
+            ))}
+          </div>
+          <Spacer size="medium" />
+          <StickyButton label="Next" onClick={handleSaveSelections} sticky />
+        </div>
+      ) : (
+        <div className="flex w-full items-center justify-center">
+          <Spinner color="text-primary" />
+        </div>
+      )}
     </Container>
   );
 }

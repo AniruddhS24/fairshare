@@ -1,4 +1,4 @@
-const apiUrl = "https://foceompsmj.execute-api.us-east-1.amazonaws.com/prod";
+const apiUrl = "https://2yb6gxaezd.execute-api.us-east-1.amazonaws.com/prod";
 
 export async function backend<T>(
   method: "GET" | "POST" | "PUT" | "DELETE",
@@ -48,16 +48,16 @@ interface Receipt {
   grand_total: string;
 }
 
-export async function getReceipt(receiptid: string): Promise<Receipt> {
-  return await backend("GET", `/receipt/${receiptid}`);
+export async function getReceipt(receipt_id: string): Promise<Receipt> {
+  return await backend("GET", `/receipt/${receipt_id}`);
 }
 
 export async function updateReceipt(
-  receiptid: string,
+  receipt_id: string,
   shared_cost: string,
   grand_total: string
 ): Promise<Receipt> {
-  return await backend("PUT", `/receipt/${receiptid}`, {
+  return await backend("PUT", `/receipt/${receipt_id}`, {
     shared_cost,
     grand_total,
   });
@@ -86,17 +86,17 @@ export interface Item {
   receipt_id: string;
 }
 
-export async function getItems(receiptid: string): Promise<Item[]> {
-  return await backend("GET", `/receipt/${receiptid}/item`);
+export async function getItems(receipt_id: string): Promise<Item[]> {
+  return await backend("GET", `/receipt/${receipt_id}/item`);
 }
 
 export async function createItem(
-  receiptid: string,
+  receipt_id: string,
   name: string,
   quantity: string,
   price: string
 ): Promise<Item> {
-  return await backend("POST", `/receipt/${receiptid}/item`, {
+  return await backend("POST", `/receipt/${receipt_id}/item`, {
     name,
     quantity,
     price,
@@ -104,13 +104,13 @@ export async function createItem(
 }
 
 export async function updateItem(
-  receiptid: string,
+  receipt_id: string,
   item_id: string,
   name: string,
   quantity: string,
   price: string
 ): Promise<Item> {
-  return await backend("PUT", `/receipt/${receiptid}/item/${item_id}`, {
+  return await backend("PUT", `/receipt/${receipt_id}/item/${item_id}`, {
     name,
     quantity,
     price,
@@ -118,10 +118,10 @@ export async function updateItem(
 }
 
 export async function deleteItem(
-  receiptid: string,
+  receipt_id: string,
   item_id: string
 ): Promise<void> {
-  return await backend("DELETE", `/receipt/${receiptid}/item/${item_id}`);
+  return await backend("DELETE", `/receipt/${receipt_id}/item/${item_id}`);
 }
 
 // Splits
@@ -134,21 +134,32 @@ interface Split {
   split: string;
 }
 
-export async function getSplits(receiptid: string): Promise<Split[]> {
-  return await backend("GET", `/receipt/${receiptid}/split`);
+export async function getSplits(receipt_id: string): Promise<Split[]> {
+  return await backend("GET", `/receipt/${receipt_id}/split`);
+}
+
+export async function getMySplits(receipt_id: string): Promise<Split[]> {
+  return await backend("GET", `/receipt/${receipt_id}/split?only_mine=true`);
 }
 
 export async function createSplit(
-  receiptid: string,
+  receipt_id: string,
   quantity: string,
   split: string,
   item_id: string
 ): Promise<Split> {
-  return await backend("POST", `/receipt/${receiptid}/split`, {
+  return await backend("POST", `/receipt/${receipt_id}/split`, {
     quantity,
     split,
     item_id,
   });
+}
+
+export async function deleteSplit(
+  receipt_id: string,
+  split_id: string
+): Promise<void> {
+  return await backend("DELETE", `/receipt/${receipt_id}/split/${split_id}`);
 }
 
 // Users/Roles
@@ -165,15 +176,15 @@ interface Role {
   role: string;
 }
 
-export async function getUserRole(receiptid: string): Promise<Role> {
-  return await backend("GET", `/receipt/${receiptid}/role`);
+export async function getUserRole(receipt_id: string): Promise<Role> {
+  return await backend("GET", `/receipt/${receipt_id}/role`);
 }
 
 export async function createRole(
-  receiptid: string,
+  receipt_id: string,
   role: string
 ): Promise<Role> {
-  return await backend("POST", `/receipt/${receiptid}/role`, { role });
+  return await backend("POST", `/receipt/${receipt_id}/role`, { role });
 }
 
 export async function createJWTToken(
@@ -188,7 +199,7 @@ export async function getUserFromJWT(): Promise<User> {
 }
 
 export async function getParticipants(
-  receiptid: string
+  receipt_id: string
 ): Promise<{ hosts: User[]; consumers: User[] }> {
-  return await backend("GET", `/receipt/${receiptid}/participants`);
+  return await backend("GET", `/receipt/${receipt_id}/participants`);
 }

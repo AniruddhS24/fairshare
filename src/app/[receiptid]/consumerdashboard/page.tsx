@@ -25,24 +25,23 @@ export default function ConsumerDashboard({
   const [selectedTab, setSelectedTab] = useState(0);
   // const [receiptItems, setReceiptItems] = useState([]);
 
+  const receipt_id = params.receiptid;
   const router = useRouter();
 
   useEffect(() => {
-    if (status === AuthStatus.CHECKING) {
-      return;
-    } else if (status === AuthStatus.NO_TOKEN) {
-      router.push(`/user?receiptid=${params.receiptid}&page=adjustments`);
-    } else if (status === AuthStatus.UNAUTHORIZED) {
-      router.push(`/unauthorized`);
-    } else if (status === AuthStatus.AUTHORIZED) {
-      getPermission(params.receiptid).then((permission) => {
-        if (permission === Permission.UNAUTHORIZED) {
-          router.push(`/unauthorized`);
-        }
-      });
-    }
-
-    // setReceiptItems(dummyGetReceiptItems(params.receiptid));
+    // if (status === AuthStatus.CHECKING) {
+    //   return;
+    // } else if (status === AuthStatus.NO_TOKEN) {
+    //   router.push(`/user?receiptid=${params.receiptid}&page=adjustments`);
+    // } else if (status === AuthStatus.UNAUTHORIZED) {
+    //   router.push(`/unauthorized`);
+    // } else if (status === AuthStatus.AUTHORIZED) {
+    //   getPermission(params.receiptid).then((permission) => {
+    //     if (permission === Permission.UNAUTHORIZED) {
+    //       router.push(`/unauthorized`);
+    //     }
+    //   });
+    // }
   }, [status, params.receiptid]);
 
   const markSettled = () => {

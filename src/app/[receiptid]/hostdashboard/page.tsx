@@ -10,6 +10,7 @@ import LineItem from "@/components/LineItem";
 import ConsumerBreakdown from "@/components/ConsumerBreakdown";
 import ItemBreakdown from "@/components/ItemBreakdown";
 import Container from "@/components/Container";
+import Spinner from "@/components/Spinner";
 import {
   useGlobalContext,
   AuthStatus,
@@ -55,30 +56,34 @@ export default function HostDashboard({
   const [totalCost, setTotalCost] = useState(0.0);
   const [isReminderPopupVisible, setIsReminderPopupVisible] = useState(false);
   const [reminderName, setReminderName] = useState("");
+  const [loading, setLoading] = useState(true);
 
   const router = useRouter();
+  const receipt_id = params.receiptid;
 
   useEffect(() => {
+    setLoading(true);
+
     if (status === AuthStatus.CHECKING) {
       return;
     } else if (status === AuthStatus.NO_TOKEN) {
-      router.push(`/user?receiptid=${params.receiptid}&page=hostdashboard`);
+      router.push(`/user?receiptid=${receipt_id}&page=hostdashboard`);
     } else if (status === AuthStatus.UNAUTHORIZED) {
       router.push(`/unauthorized`);
     } else if (status === AuthStatus.AUTHORIZED) {
-      getPermission(params.receiptid).then((permission) => {
-        if (permission === Permission.UNAUTHORIZED) {
+      getPermission(receipt_id).then((permission) => {
+        if (permission !== Permission.HOST) {
           router.push(`/unauthorized`);
         }
       });
     }
 
     const fetchReceipt = async () => {
-      return await getReceipt(params.receiptid);
+      return await getReceipt(receipt_id);
     };
 
     const fetchUsers = async () => {
-      const participants = await getParticipants(params.receiptid);
+      const participants = await getParticipants(receipt_id);
       const users: { [key: string]: User & { host: boolean } } = {};
       for (const user of participants.hosts) {
         users[user.id] = { ...user, host: true };
@@ -90,11 +95,11 @@ export default function HostDashboard({
     };
 
     const fetchItems = async () => {
-      return await getItems(params.receiptid);
+      return await getItems(receipt_id);
     };
 
     const fetchSplits = async () => {
-      const receipt_splits = await getSplits(params.receiptid);
+      const receipt_splits = await getSplits(receipt_id);
       const splits = [];
       for (const split of receipt_splits) {
         splits.push(split);
@@ -186,8 +191,8 @@ export default function HostDashboard({
       setTotalCost(total_cost + parseFloat(receipt.shared_cost));
     };
 
-    fetchData();
-  }, [status, params.receiptid, router]);
+    fetchData().then(() => setLoading(false));
+  }, [status, receipt_id, router]);
 
   const markSettled = () => {
     alert("TODO");
@@ -247,6 +252,7 @@ export default function HostDashboard({
           setSelectedTab={setSelectedTab}
         />
         <Spacer size="large" />
+        !loading ?
         {selectedTab === 0 ? (
           <div className="w-full">
             {receiptItems.map((item, index) => (
@@ -327,6 +333,11 @@ export default function HostDashboard({
             )}
           </div>
         )}
+        : (
+        <div className="flex w-full items-center justify-center">
+          <Spinner color="text-primary" />
+        </div>
+        )
       </Container>
     </div>
   );
