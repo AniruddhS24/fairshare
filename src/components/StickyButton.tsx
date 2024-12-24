@@ -1,4 +1,3 @@
-// StickyButton.tsx
 import React from "react";
 import Text from "./Text";
 import Spinner from "./Spinner";
@@ -8,6 +7,7 @@ interface StickyButtonProps {
   onClick: () => void;
   sticky?: boolean; // Prop to determine if the button should be sticky
   disabled?: boolean; // Prop to determine if the button should be disabled
+  onComplete?: () => void; // Callback to set loading to false
 }
 
 const StickyButton: React.FC<StickyButtonProps> = ({
@@ -18,9 +18,15 @@ const StickyButton: React.FC<StickyButtonProps> = ({
 }) => {
   const [loading, setLoading] = React.useState(false);
 
-  const handleClick = () => {
+  const handleClick = async () => {
     setLoading(true);
-    onClick();
+    try {
+      await onClick();
+    } catch (error) {
+      console.error("Error during onClick:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return loading ? (

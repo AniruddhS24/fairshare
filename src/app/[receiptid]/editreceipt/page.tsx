@@ -49,6 +49,7 @@ export default function EditReceiptPage({
     edited: false,
   });
   const [counter, setCounter] = useState(0);
+  const receipt_id = params.receiptid;
   const router = useRouter();
 
   useEffect(() => {
@@ -57,11 +58,11 @@ export default function EditReceiptPage({
     if (status === AuthStatus.CHECKING) {
       return;
     } else if (status === AuthStatus.NO_TOKEN) {
-      router.push(`/user?receiptid=${params.receiptid}&page=editreceipt`);
+      router.push(`/user?receiptid=${receipt_id}&page=editreceipt`);
     } else if (status === AuthStatus.UNAUTHORIZED) {
       router.push(`/unauthorized`);
     } else if (status === AuthStatus.AUTHORIZED) {
-      getPermission(params.receiptid).then((permission) => {
+      getPermission(receipt_id).then((permission) => {
         if (permission === Permission.UNAUTHORIZED) {
           router.push(`/unauthorized`);
         }
@@ -69,12 +70,12 @@ export default function EditReceiptPage({
     }
 
     const fetchData = async () => {
-      const receipt = await getReceipt(params.receiptid);
+      const receipt = await getReceipt(receipt_id);
       setSharedCharges({ value: receipt.shared_cost, edited: false });
 
       const items = [];
       let ct = counter;
-      const receipt_items = await getItems(params.receiptid);
+      const receipt_items = await getItems(receipt_id);
       for (const item of receipt_items) {
         items.push({
           id: item.id,
@@ -92,7 +93,8 @@ export default function EditReceiptPage({
     };
 
     fetchData().then(() => setLoading(false));
-  }, [status, params.receiptid, router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, receipt_id]);
 
   const setItemProp =
     (index: number, field: keyof EditItemProps) => (value: string | number) => {
@@ -149,35 +151,29 @@ export default function EditReceiptPage({
     for (const item of data) {
       if (item.id && item.deleted) {
         receipt_changed = true;
-        promises.push(deleteItem(params.receiptid, item.id));
+        promises.push(deleteItem(receipt_id, item.id));
       } else if (item.id && item.edited) {
         receipt_changed = true;
         promises.push(
-          updateItem(
-            params.receiptid,
-            item.id,
-            item.name,
-            item.quantity,
-            item.price
-          )
+          updateItem(receipt_id, item.id, item.name, item.quantity, item.price)
         );
       } else if (!item.id) {
         receipt_changed = true;
         promises.push(
-          createItem(params.receiptid, item.name, item.quantity, item.price)
+          createItem(receipt_id, item.name, item.quantity, item.price)
         );
       }
     }
     if (receipt_changed) {
       promises.push(
-        backend("PUT", `/receipt/${params.receiptid}`, {
+        backend("PUT", `/receipt/${receipt_id}`, {
           shared_cost: sharedCharges.value,
           grand_total: calculateTotal().toFixed(2),
         })
       );
     }
     await Promise.all(promises);
-    router.push(`/${params.receiptid}/split`);
+    router.push(`/${receipt_id}/split`);
   };
 
   return (

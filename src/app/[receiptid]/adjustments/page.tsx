@@ -156,7 +156,7 @@ export default function AdjustmentsPage({
           name: item.name,
           quantity: item.quantity,
           price: item.price,
-          split: "",
+          split: "0",
         });
       }
       const selected = searchParams.get("selected");
@@ -168,7 +168,8 @@ export default function AdjustmentsPage({
     };
 
     fetchData().then(() => setLoading(false));
-  }, [status, receipt_id, router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, receipt_id, searchParams]);
 
   const setItemProp =
     (index: number, field: keyof AdjustmentReceiptItem) =>
@@ -188,7 +189,7 @@ export default function AdjustmentsPage({
 
     for (const item of receiptItems) {
       promises.push(
-        createSplit(receipt_id, item.id, item.quantity, item.split)
+        createSplit(receipt_id, item.quantity, item.split, item.id)
       );
     }
 

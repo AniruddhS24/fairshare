@@ -15,28 +15,27 @@ import {
   Permission,
   AuthStatus,
 } from "@/contexts/GlobalContext";
-import { createRole } from "@/lib/backend";
+import { createRole, getUserRole, createOTP, verifyOTP } from "@/lib/backend";
+
+const OTP_ENABLED = false;
 
 interface PhoneVerificationProps {
-  handleCode: (code: string) => void; // Function that takes a string and returns void
+  code: string;
+  setCode: React.Dispatch<React.SetStateAction<string>>;
+  handleCode: (code: string) => void;
 }
 
 const PhoneVerification: React.FC<PhoneVerificationProps> = ({
+  code,
+  setCode,
   handleCode,
 }) => {
-  const [code, setCode] = useState<string>(""); // Single string for the code
-  const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Update the code when the user types
   const handleInputChange = (value: string) => {
     const sanitizedValue = value.replace(/\D/g, "").slice(0, 6); // Allow only digits, max length 6
     setCode(sanitizedValue);
-  };
-
-  const handleSubmit = () => {
-    console.log("Verification code entered:", code);
-    router.push("/next-step"); // Replace with your next step route
   };
 
   // Focus the hidden input when the user clicks on the container
@@ -81,7 +80,7 @@ const PhoneVerification: React.FC<PhoneVerificationProps> = ({
       <Spacer size="large" />
       <StickyButton
         label="Verify"
-        onClick={() => handleCode(code)}
+        onClick={async () => handleCode(code)}
         disabled={code.length !== 6}
       />
     </Container>
@@ -95,6 +94,7 @@ function UserOnboardingPage() {
   const [loading, setLoading] = useState(false);
   const [name, setName] = useState<string>("");
   const [phoneNumber, setPhoneNumber] = useState<string>("");
+  const [code, setCode] = useState<string>("");
   const [waitingForCode, setWaitingForCode] = useState(false);
 
   const receipt_id = searchParams.get("receiptid");
@@ -105,7 +105,12 @@ function UserOnboardingPage() {
     const goToNextPage = async () => {
       if (receipt_id) {
         if (onboardConsumer) {
-          await createRole(receipt_id, Permission.CONSUMER);
+          try {
+            await getUserRole(receipt_id);
+          } catch {
+            await createRole(receipt_id, Permission.CONSUMER);
+          }
+
           router.push(`/${receipt_id}/split`);
         } else if (page) {
           router.push(`/${receipt_id}/${page}`);
@@ -122,21 +127,35 @@ function UserOnboardingPage() {
     } else {
       setLoading(false);
     }
-  }, [status]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, receipt_id, page, onboardConsumer]);
 
   const handleNext = async () => {
-    setWaitingForCode(true);
-  };
-
-  const handleCode = async (code: string) => {
-    const valid = true; // Replace with your verification logic
-    if (valid) {
+    if (!OTP_ENABLED) {
       const userData = {
         id: null,
         name: name,
         phone: phoneNumber,
       };
       await login(userData);
+    } else {
+      await createOTP(phoneNumber);
+      setWaitingForCode(true);
+    }
+  };
+
+  const handleCode = async (code: string) => {
+    try {
+      await verifyOTP(phoneNumber, parseInt(code));
+      const userData = {
+        id: null,
+        name: name,
+        phone: phoneNumber,
+      };
+      await login(userData);
+    } catch (error) {
+      console.log(error);
+      setCode("");
     }
   };
 
@@ -174,14 +193,12 @@ function UserOnboardingPage() {
       <Spacer size="large" />
       <StickyButton
         label="Next"
-        onClick={() => {
-          handleNext();
-        }}
+        onClick={handleNext}
         disabled={isNextDisabled}
       />
     </Container>
   ) : (
-    <PhoneVerification handleCode={handleCode} />
+    <PhoneVerification code={code} setCode={setCode} handleCode={handleCode} />
   );
 }
 

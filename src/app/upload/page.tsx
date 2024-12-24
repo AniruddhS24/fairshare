@@ -104,13 +104,7 @@ export default function UploadReceiptPage() {
         alt="Uploaded Receipt"
         className="w-full border border-lightgray rounded-lg"
       />
-      <StickyButton
-        label="Split Receipt"
-        onClick={() => {
-          handleSplitReceipt();
-        }}
-        sticky
-      />
+      <StickyButton label="Split Receipt" onClick={handleSplitReceipt} sticky />
     </Container>
   ) : (
     <Container centered>

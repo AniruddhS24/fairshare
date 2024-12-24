@@ -1,4 +1,4 @@
-const apiUrl = "https://2yb6gxaezd.execute-api.us-east-1.amazonaws.com/prod";
+const apiUrl = "https://riz1oaveei.execute-api.us-east-1.amazonaws.com/prod";
 
 export async function backend<T>(
   method: "GET" | "POST" | "PUT" | "DELETE",
@@ -174,6 +174,15 @@ interface Role {
   receipt_id: string;
   user_id: string;
   role: string;
+}
+
+export async function createOTP(phone: string): Promise<{ otp: string }> {
+  return await backend("POST", `/otp_generate`, { phone });
+}
+
+// TODO: don't need to return promises
+export async function verifyOTP(phone: string, otp: number) {
+  return await backend("POST", `/otp_verify`, { phone, otp });
 }
 
 export async function getUserRole(receipt_id: string): Promise<Role> {

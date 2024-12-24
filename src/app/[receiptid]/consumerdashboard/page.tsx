@@ -4,29 +4,21 @@ import { useState, useEffect } from "react";
 import Text from "@/components/Text";
 import Spacer from "@/components/Spacer";
 import StickyButton from "@/components/StickyButton";
-import { useRouter } from "next/navigation";
 import SegmentedToggle from "@/components/Toggle";
 import LineItem from "@/components/LineItem";
 import ConsumerBreakdown from "@/components/ConsumerBreakdown";
 import ItemBreakdown from "@/components/ItemBreakdown";
 import Container from "@/components/Container";
-import {
-  useGlobalContext,
-  Permission,
-  AuthStatus,
-} from "@/contexts/GlobalContext";
+import { useGlobalContext } from "@/contexts/GlobalContext";
 
 export default function ConsumerDashboard({
   params,
 }: {
   params: { receiptid: string };
 }) {
-  const { status, getPermission } = useGlobalContext();
+  const { status } = useGlobalContext();
   const [selectedTab, setSelectedTab] = useState(0);
   // const [receiptItems, setReceiptItems] = useState([]);
-
-  const receipt_id = params.receiptid;
-  const router = useRouter();
 
   useEffect(() => {
     // if (status === AuthStatus.CHECKING) {

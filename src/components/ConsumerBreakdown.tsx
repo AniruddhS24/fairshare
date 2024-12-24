@@ -20,6 +20,7 @@ const ConsumerBreakdown: React.FC<ConsumerBreakdownProps> = ({
   isHost = false,
 }) => {
   const calculateShare = (quantity: number, split: number, price: number) => {
+    // if (split == 0) return price * quantity;
     return (price * quantity) / split;
   };
 
