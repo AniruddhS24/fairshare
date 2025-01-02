@@ -7,12 +7,14 @@ import React, {
   ReactNode,
   useEffect,
 } from "react";
+
 import { createJWTToken, getUserFromJWT, getUserRole } from "@/lib/backend";
 
 interface User {
   id: string | null;
   name: string;
   phone: string;
+  venmo_handle: string;
 }
 
 export enum Permission {
@@ -24,7 +26,7 @@ export enum Permission {
 export enum AuthStatus {
   CHECKING = "checking", // Initial state when verifying JWT
   AUTHORIZED = "authorized", // Valid JWT and user authenticated
-  UNAUTHORIZED = "unauthorized", // Invalid JWT
+  BAD_TOKEN = "bad_token", // Invalid JWT
   NO_TOKEN = "no_token", // No JWT found in storage
 }
 
@@ -50,24 +52,34 @@ export const GlobalProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [status, setStatus] = useState<AuthStatus>(AuthStatus.CHECKING);
 
-  useEffect(() => {
+  const readJWT = () => {
     const jwt = localStorage.getItem("jwt");
     if (jwt) {
       console.log(jwt);
       getUserFromJWT()
         .then((data) => {
-          setUser({ id: data.id, name: data.name, phone: data.phone });
+          setUser({
+            id: data.id,
+            name: data.name,
+            phone: data.phone,
+            venmo_handle: data.venmo_handle,
+          });
           console.log("User found:", data);
           setStatus(AuthStatus.AUTHORIZED);
         })
         .catch(() => {
-          setStatus(AuthStatus.UNAUTHORIZED);
+          setStatus(AuthStatus.BAD_TOKEN);
           localStorage.removeItem("jwt");
         });
     } else {
       console.log("No token found");
+      setUser(null);
       setStatus(AuthStatus.NO_TOKEN);
     }
+  };
+
+  useEffect(() => {
+    readJWT();
   }, []);
 
   const getPermission = async (receiptId: string): Promise<Permission> => {
@@ -88,15 +100,18 @@ export const GlobalProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const login = async (userData: User) => {
-    const resp = await createJWTToken(userData.name, userData.phone);
+    const resp = await createJWTToken(
+      userData.name,
+      userData.phone,
+      userData.venmo_handle
+    );
     localStorage.setItem("jwt", resp.token);
-    setStatus(AuthStatus.AUTHORIZED);
+    readJWT();
   };
 
   const logout = () => {
     localStorage.removeItem("jwt");
-    setStatus(AuthStatus.NO_TOKEN);
-    setUser(null);
+    setStatus(AuthStatus.BAD_TOKEN);
   };
 
   return (

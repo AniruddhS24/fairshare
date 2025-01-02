@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useRouter } from "next/navigation";
 
 import Spacer from "@/components/Spacer";
+import LogoutSection from "@/components/LogoutSection";
 import Text from "../../../components/Text";
 import QuantityInput from "@/components/QuantityInput";
 import ModifyButton from "@/components/ModifyButton";
@@ -16,7 +17,13 @@ import {
   Permission,
   AuthStatus,
 } from "@/contexts/GlobalContext";
-import { getItems, getMySplits, createSplit, deleteSplit } from "@/lib/backend";
+import {
+  getReceipt,
+  getItems,
+  getMySplits,
+  createSplit,
+  deleteSplit,
+} from "@/lib/backend";
 
 type AccordionItemProps = {
   item: {
@@ -76,7 +83,7 @@ const AccordionItem: React.FC<AccordionItemProps> = ({
                   <Text type="body_bold" className="text-darkest">
                     units
                   </Text>{" "}
-                  of this item did you consume?
+                  of this item did you/your group consume?
                 </Text>
               </div>
               <div className="col-span-2">
@@ -89,11 +96,11 @@ const AccordionItem: React.FC<AccordionItemProps> = ({
             <div className="col-span-8 grid grid-cols-8 items-center">
               <div className="col-span-6 pr-2">
                 <Text type="body" className="text-darkest">
-                  How many people did you{" "}
+                  Only if you{" "}
                   <Text type="body_bold" className="text-darkest">
-                    share
+                    shared
                   </Text>{" "}
-                  this amount with?
+                  this item, how many people are in your group?
                 </Text>
               </div>
               <div className="col-span-2">
@@ -137,8 +144,8 @@ export default function AdjustmentsPage({
       return;
     } else if (status === AuthStatus.NO_TOKEN) {
       router.push(`/user?receiptid=${receipt_id}&page=adjustments`);
-    } else if (status === AuthStatus.UNAUTHORIZED) {
-      router.push(`/unauthorized`);
+    } else if (status === AuthStatus.BAD_TOKEN) {
+      router.push(`/user`);
     } else if (status === AuthStatus.AUTHORIZED) {
       getPermission(receipt_id).then((permission) => {
         if (permission === Permission.UNAUTHORIZED) {
@@ -149,6 +156,10 @@ export default function AdjustmentsPage({
 
     const fetchData = async () => {
       let items = [];
+      const receipt = await getReceipt(receipt_id);
+      if (receipt.settled) {
+        router.push(`/${receipt_id}/dashboard`);
+      }
       const receipt_items = await getItems(receipt_id);
       for (const item of receipt_items) {
         items.push({
@@ -206,7 +217,7 @@ export default function AdjustmentsPage({
 
   return (
     <Container>
-      <Spacer size="large" />
+      <LogoutSection></LogoutSection>
       <div className="flex items-center w-full">
         <Text type="xl_heading" className="text-darkest">
           Adjustments
@@ -220,11 +231,11 @@ export default function AdjustmentsPage({
         <Text type="body_bold" className="text-darkest">
           By default each item will be split evenly across all consumers.
         </Text>{" "}
-        However, if you consumed an uneven portion or quantity of any item,
-        adjust that here.
+        However, ONLY if you consumed an uneven portion of any item, adjust that
+        here.
         <Text type="body_bold" className="text-darkest">
           {" "}
-          If not, please skip this step.
+          If not, please SKIP this step.
         </Text>
       </Text>
       <Spacer size="large" />

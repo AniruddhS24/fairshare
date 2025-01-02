@@ -6,6 +6,7 @@ interface ItemBreakdownProps {
   quantity: number;
   price: number;
   consumers: string[];
+  override_price?: number;
 }
 
 const ItemBreakdown: React.FC<ItemBreakdownProps> = ({
@@ -13,7 +14,11 @@ const ItemBreakdown: React.FC<ItemBreakdownProps> = ({
   quantity,
   price,
   consumers,
+  override_price,
 }) => {
+  const finalPrice =
+    override_price !== undefined ? override_price : quantity * price;
+
   return (
     <div className="w-full">
       <div className="flex justify-between items-center w-full">
@@ -21,7 +26,7 @@ const ItemBreakdown: React.FC<ItemBreakdownProps> = ({
           {quantity}x {name}
         </Text>
         <Text type="body_bold" className="text-midgray">
-          ${(quantity * price).toFixed(2)}
+          ${finalPrice.toFixed(2)}
         </Text>
       </div>
       {/* <div>

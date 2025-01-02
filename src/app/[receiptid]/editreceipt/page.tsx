@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Spacer from "@/components/Spacer";
 import Text from "../../../components/Text";
+import LogoutSection from "@/components/LogoutSection";
 import ItemInput from "@/components/ItemInput";
 import PriceInput from "@/components/PriceInput";
 import QuantityInput from "@/components/QuantityInput";
@@ -59,8 +60,8 @@ export default function EditReceiptPage({
       return;
     } else if (status === AuthStatus.NO_TOKEN) {
       router.push(`/user?receiptid=${receipt_id}&page=editreceipt`);
-    } else if (status === AuthStatus.UNAUTHORIZED) {
-      router.push(`/unauthorized`);
+    } else if (status === AuthStatus.BAD_TOKEN) {
+      router.push(`/user`);
     } else if (status === AuthStatus.AUTHORIZED) {
       getPermission(receipt_id).then((permission) => {
         if (permission === Permission.UNAUTHORIZED) {
@@ -71,6 +72,9 @@ export default function EditReceiptPage({
 
     const fetchData = async () => {
       const receipt = await getReceipt(receipt_id);
+      if (receipt.settled) {
+        router.push(`/${receipt_id}/dashboard`);
+      }
       setSharedCharges({ value: receipt.shared_cost, edited: false });
 
       const items = [];
@@ -178,7 +182,7 @@ export default function EditReceiptPage({
 
   return (
     <Container>
-      <Spacer size="large" />
+      <LogoutSection></LogoutSection>
       <Text type="xl_heading" className="text-darkest">
         Edit Receipt
       </Text>

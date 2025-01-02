@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Text from "../../components/Text";
+import LogoutSection from "@/components/LogoutSection";
 import SquareButton from "../../components/SquareButton";
-import Image from "next/image";
 import Spacer from "@/components/Spacer";
 import ModifyButton from "@/components/ModifyButton";
 import StickyButton from "@/components/StickyButton";
@@ -27,8 +27,8 @@ export default function UploadReceiptPage() {
       return;
     } else if (status === AuthStatus.NO_TOKEN) {
       router.push(`/user?page=upload`);
-    } else if (status === AuthStatus.UNAUTHORIZED) {
-      router.push(`/unauthorized`);
+    } else if (status === AuthStatus.BAD_TOKEN) {
+      router.push(`/user`);
     }
   }, [status, router]);
 
@@ -88,8 +88,7 @@ export default function UploadReceiptPage() {
 
   return uploadedImage ? (
     <Container centered>
-      <Spacer size="large" />
-      <Image src="/logo.png" alt="Logo" width={250} height={100} />
+      <LogoutSection></LogoutSection>
       <Spacer size="medium" />
       <ModifyButton
         icon="fa-sync-alt"
@@ -108,8 +107,7 @@ export default function UploadReceiptPage() {
     </Container>
   ) : (
     <Container centered>
-      <Spacer size="large" />
-      <Image src="/logo.png" alt="Logo" width={250} height={100} />
+      <LogoutSection></LogoutSection>
       <Spacer size="large" />
       <Text type="m_heading" className="text-darkest">
         Upload Your Receipt

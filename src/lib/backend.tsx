@@ -1,4 +1,4 @@
-const apiUrl = "https://riz1oaveei.execute-api.us-east-1.amazonaws.com/prod";
+const apiUrl = "https://0079eradld.execute-api.us-east-1.amazonaws.com/prod";
 
 export async function backend<T>(
   method: "GET" | "POST" | "PUT" | "DELETE",
@@ -46,6 +46,7 @@ interface Receipt {
   image_url: string;
   shared_cost: string;
   grand_total: string;
+  settled: boolean;
 }
 
 export async function getReceipt(receipt_id: string): Promise<Receipt> {
@@ -60,6 +61,12 @@ export async function updateReceipt(
   return await backend("PUT", `/receipt/${receipt_id}`, {
     shared_cost,
     grand_total,
+  });
+}
+
+export async function markAsSettled(receipt_id: string): Promise<Receipt> {
+  return await backend("PUT", `/receipt/${receipt_id}`, {
+    settled: true,
   });
 }
 
@@ -167,6 +174,7 @@ export interface User {
   id: string;
   name: string;
   phone: string;
+  venmo_handle: string;
 }
 
 interface Role {
@@ -198,9 +206,10 @@ export async function createRole(
 
 export async function createJWTToken(
   name: string,
-  phone: string
+  phone: string,
+  venmo_handle: string
 ): Promise<{ token: string }> {
-  return await backend("POST", "/token", { name, phone });
+  return await backend("POST", "/token", { name, phone, venmo_handle });
 }
 
 export async function getUserFromJWT(): Promise<User> {

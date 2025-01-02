@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import LogoutSection from "@/components/LogoutSection";
 import Text from "@/components/Text";
 import SquareButton from "@/components/SquareButton";
 import Spacer from "@/components/Spacer";
@@ -30,8 +31,8 @@ export default function ShareReceiptPage({
       return;
     } else if (status === AuthStatus.NO_TOKEN) {
       router.push(`/user?receiptid=${receipt_id}&page=share`);
-    } else if (status === AuthStatus.UNAUTHORIZED) {
-      router.push(`/unauthorized`);
+    } else if (status === AuthStatus.BAD_TOKEN) {
+      router.push(`/user`);
     } else if (status === AuthStatus.AUTHORIZED) {
       getPermission(receipt_id).then((permission) => {
         if (permission === Permission.HOST) {
@@ -49,7 +50,7 @@ export default function ShareReceiptPage({
         await navigator.share({
           title: "FairShare",
           text: "Split your receipt with FairShare",
-          url: `https://main.d3o7tn3uwoluhy.amplifyapp.com/user?receiptid=${receipt_id}&onboardConsumer=true`, // URL to share (should be link/user?receiptid=...&onboardConsumer=true&page=split)
+          url: `https://splitmyreceipt.com/user?receiptid=${receipt_id}&onboardConsumer=true`, // URL to share (should be link/user?receiptid=...&onboardConsumer=true&page=split)
         });
         console.log("Content shared successfully");
       } catch (error) {
@@ -61,12 +62,12 @@ export default function ShareReceiptPage({
   };
 
   const handleDashboard = () => {
-    router.push(`/${receipt_id}/hostdashboard`);
+    router.push(`/${receipt_id}/dashboard`);
   };
 
   return (
     <Container>
-      <Spacer size="large" />
+      <LogoutSection></LogoutSection>
       <Text type="xl_heading" className="text-darkest">
         Share and Settle
       </Text>

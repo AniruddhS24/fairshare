@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Spacer from "@/components/Spacer";
+import LogoutSection from "@/components/LogoutSection";
 import Text from "../../../components/Text";
 import LineItem from "@/components/LineItem";
 import StickyButton from "@/components/StickyButton";
@@ -40,9 +41,9 @@ export default function SplitPage({
     if (status === AuthStatus.CHECKING) {
       return;
     } else if (status === AuthStatus.NO_TOKEN) {
-      router.push(`/user?receiptid=${params.receiptid}&page=hostdashboard`);
-    } else if (status === AuthStatus.UNAUTHORIZED) {
-      router.push(`/unauthorized`);
+      router.push(`/user?receiptid=${params.receiptid}&page=split`);
+    } else if (status === AuthStatus.BAD_TOKEN) {
+      router.push(`/user`);
     } else if (status === AuthStatus.AUTHORIZED) {
       getPermission(params.receiptid).then((permission) => {
         if (permission === Permission.UNAUTHORIZED) {
@@ -86,7 +87,7 @@ export default function SplitPage({
 
   return (
     <Container>
-      <Spacer size="large" />
+      <LogoutSection></LogoutSection>
       <Text type="xl_heading" className="text-darkest">
         My Share
       </Text>
@@ -125,7 +126,12 @@ export default function SplitPage({
             ))}
           </div>
           <Spacer size="medium" />
-          <StickyButton label="Next" onClick={handleSaveSelections} sticky />
+          <StickyButton
+            label="Next"
+            onClick={handleSaveSelections}
+            disabled={!receiptItems.some((item) => item.isChecked)}
+            sticky
+          />
         </div>
       ) : (
         <div className="flex w-full items-center justify-center">

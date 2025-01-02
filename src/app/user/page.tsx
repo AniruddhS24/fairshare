@@ -94,6 +94,7 @@ function UserOnboardingPage() {
   const [loading, setLoading] = useState(false);
   const [name, setName] = useState<string>("");
   const [phoneNumber, setPhoneNumber] = useState<string>("");
+  const [venmoHandle, setVenmoHandle] = useState<string>("");
   const [code, setCode] = useState<string>("");
   const [waitingForCode, setWaitingForCode] = useState(false);
 
@@ -110,7 +111,6 @@ function UserOnboardingPage() {
           } catch {
             await createRole(receipt_id, Permission.CONSUMER);
           }
-
           router.push(`/${receipt_id}/split`);
         } else if (page) {
           router.push(`/${receipt_id}/${page}`);
@@ -136,6 +136,7 @@ function UserOnboardingPage() {
         id: null,
         name: name,
         phone: phoneNumber,
+        venmo_handle: venmoHandle.replace("@", ""),
       };
       await login(userData);
     } else {
@@ -151,6 +152,7 @@ function UserOnboardingPage() {
         id: null,
         name: name,
         phone: phoneNumber,
+        venmo_handle: venmoHandle.replace("@", ""),
       };
       await login(userData);
     } catch (error) {
@@ -174,21 +176,21 @@ function UserOnboardingPage() {
         Enter Information
       </Text>
       <Text type="body" className="text-center text-midgray">
-        Please enter your name and phone number to get started
+        Get started splitting receipts seamlessly
       </Text>
       <Spacer size="large" />
       <TextInput placeholder="Name" value={name} setValue={setName} />
-      {/* <Spacer size="medium" />
-      <TextInput
-        placeholder="@venmo-handle"
-        value={venmoHandle}
-        setValue={setVenmoHandle}
-      /> */}
       <Spacer size="medium" />
       <PhoneInput
         placeholder="Phone number"
         value={phoneNumber}
         setValue={setPhoneNumber}
+      />
+      <Spacer size="medium" />
+      <TextInput
+        placeholder="Venmo Handle (optional)"
+        value={venmoHandle}
+        setValue={setVenmoHandle}
       />
       <Spacer size="large" />
       <StickyButton
@@ -196,6 +198,12 @@ function UserOnboardingPage() {
         onClick={handleNext}
         disabled={isNextDisabled}
       />
+      <Spacer size="large" />
+      <Text type="body" className="text-center text-midgray text-xs">
+        By providing your phone number, you consent to receive SMS messages from
+        FairShare. Message and data rates may apply. You may opt-out at any
+        time.
+      </Text>
     </Container>
   ) : (
     <PhoneVerification code={code} setCode={setCode} handleCode={handleCode} />

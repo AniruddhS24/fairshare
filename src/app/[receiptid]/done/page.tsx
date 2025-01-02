@@ -18,7 +18,7 @@ export default function DoneReceiptPage() {
         <Text type="body" className="text-darkest">
           The host has been notified that you have added your consumed items!
           Once everyone else in your party has also done so, you will receive a
-          text to view and send the final payment amount.
+          link to view the final payment amount.
         </Text>
       </div>
     </div>
