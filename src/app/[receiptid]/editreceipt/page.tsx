@@ -226,11 +226,11 @@ export default function EditReceiptPage({
                   >
                     <i className="fas fa-trash text-midgray"></i>
                   </button>
-                  {list_index !== receiptItems.length - 1 && (
+                  {/* {list_index !== receiptItems.length - 1 && (
                     <div className="col-span-9 justify-center items-center">
                       <hr className="border-gray-[#C1C9D01e]" />
                     </div>
-                  )}
+                  )} */}
                 </div>
               ))}
           </div>
