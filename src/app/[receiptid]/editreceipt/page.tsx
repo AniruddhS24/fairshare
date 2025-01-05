@@ -196,7 +196,7 @@ export default function EditReceiptPage({
           <div className="grid grid-cols-9 gap-y-3 w-full">
             {receiptItems
               .filter((item) => !item.deleted)
-              .map((item, list_index) => (
+              .map((item) => (
                 <div
                   className="col-span-9 grid grid-cols-9 items-center gap-x-1 gap-y-3"
                   key={item.index}
