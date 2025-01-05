@@ -161,7 +161,7 @@ export default function EditReceiptPage({
         promises.push(
           updateItem(receipt_id, item.id, item.name, item.quantity, item.price)
         );
-      } else if (!item.id) {
+      } else if (!item.id && !item.deleted) {
         receipt_changed = true;
         promises.push(
           createItem(receipt_id, item.name, item.quantity, item.price)
