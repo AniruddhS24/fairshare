@@ -17,20 +17,23 @@ import {
 } from "@/contexts/GlobalContext";
 import { createRole, getUserRole, createOTP, verifyOTP } from "@/lib/backend";
 
-const OTP_ENABLED = false;
+const OTP_ENABLED = true;
 
 interface PhoneVerificationProps {
+  phoneNumber: string;
   code: string;
   setCode: React.Dispatch<React.SetStateAction<string>>;
   handleCode: (code: string) => void;
 }
 
 const PhoneVerification: React.FC<PhoneVerificationProps> = ({
+  phoneNumber,
   code,
   setCode,
   handleCode,
 }) => {
   const inputRef = useRef<HTMLInputElement>(null);
+  const [resentCode, setResentCode] = useState(false);
 
   // Update the code when the user types
   const handleInputChange = (value: string) => {
@@ -83,6 +86,23 @@ const PhoneVerification: React.FC<PhoneVerificationProps> = ({
         onClick={async () => handleCode(code)}
         disabled={code.length !== 6}
       />
+      <Spacer size="medium" />
+      {!resentCode ? (
+        <div className="w-full flex justify-center items-center">
+          <Text type="body">Did not receive a code? </Text>
+          <button
+            onClick={async () => {
+              setResentCode(true);
+              await createOTP(phoneNumber);
+            }}
+            className={`items-center justify-center ms-2 rounded-full`}
+          >
+            <Text type="body_bold" className="text-primary">
+              Resend
+            </Text>
+          </button>
+        </div>
+      ) : null}
     </Container>
   );
 };
@@ -212,7 +232,12 @@ function UserOnboardingPage() {
       </Text>
     </Container>
   ) : (
-    <PhoneVerification code={code} setCode={setCode} handleCode={handleCode} />
+    <PhoneVerification
+      phoneNumber={phoneNumber}
+      code={code}
+      setCode={setCode}
+      handleCode={handleCode}
+    />
   );
 }
 
