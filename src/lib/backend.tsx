@@ -1,11 +1,10 @@
-const apiUrl = "https://a766mv33k4.execute-api.us-east-1.amazonaws.com/prod";
+const apiUrl = "https://6tfoowsh0b.execute-api.us-east-1.amazonaws.com/prod";
 
 export async function backend<T>(
   method: "GET" | "POST" | "PUT" | "DELETE",
   endpoint: string,
   body: unknown = null
 ): Promise<T> {
-  console.log(method, endpoint, body);
   const token = localStorage.getItem("jwt");
   try {
     const response = await fetch(`${apiUrl}${endpoint}`, {
@@ -91,6 +90,7 @@ export interface Item {
   price: string;
   quantity: string;
   receipt_id: string;
+  split_counter?: number;
 }
 
 export async function getItems(receipt_id: string): Promise<Item[]> {
@@ -132,13 +132,12 @@ export async function deleteItem(
 }
 
 // Splits
-interface Split {
+export interface Split {
   id: string;
   receipt_id: string;
   item_id: string;
   user_id: string;
-  quantity: string;
-  split: string;
+  split_id: string;
 }
 
 export async function getSplits(receipt_id: string): Promise<Split[]> {
@@ -149,24 +148,34 @@ export async function getMySplits(receipt_id: string): Promise<Split[]> {
   return await backend("GET", `/receipt/${receipt_id}/split?only_mine=true`);
 }
 
+export async function getNewSplitID(
+  receipt_id: string,
+  item_id: string
+): Promise<number> {
+  return await backend(
+    "POST",
+    `/receipt/${receipt_id}/item/${item_id}/increment_split`,
+    {}
+  );
+}
+
 export async function createSplit(
   receipt_id: string,
-  quantity: string,
-  split: string,
-  item_id: string
+  item_id: string,
+  split_id: string
 ): Promise<Split> {
   return await backend("POST", `/receipt/${receipt_id}/split`, {
-    quantity,
-    split,
+    receipt_id,
     item_id,
+    split_id,
   });
 }
 
 export async function deleteSplit(
   receipt_id: string,
-  split_id: string
+  split_key: string
 ): Promise<void> {
-  return await backend("DELETE", `/receipt/${receipt_id}/split/${split_id}`);
+  return await backend("DELETE", `/receipt/${receipt_id}/split/${split_key}`);
 }
 
 // Users/Roles

@@ -17,7 +17,7 @@ import {
 } from "@/contexts/GlobalContext";
 import { createRole, getUserRole, createOTP, verifyOTP } from "@/lib/backend";
 
-const OTP_ENABLED = true;
+const OTP_ENABLED = false;
 
 interface PhoneVerificationProps {
   phoneNumber: string;

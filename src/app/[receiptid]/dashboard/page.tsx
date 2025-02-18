@@ -156,25 +156,33 @@ export default function Dashboard({
         };
       }
       const automatic_split: { [key: string]: number } = {};
+      const qty_offset: { [key: string]: number } = {};
+      const num_adjusted: { [key: string]: number } = {};
       for (const split of splits) {
-        if (
-          automatic_split.hasOwnProperty(split.item_id) &&
-          split.split == "0"
-        ) {
-          automatic_split[split.item_id] += 1;
-        } else if (split.split == "0") {
-          automatic_split[split.item_id] = 1;
-        }
-      }
-      for (const item_id in receipt_items) {
-        if (!automatic_split.hasOwnProperty(item_id)) {
-          automatic_split[item_id] = Object.keys(user_map).length;
+        if (automatic_split.hasOwnProperty(split.item_id)) {
+          if (split.split == "0") automatic_split[split.item_id] += 1;
+          else {
+            qty_offset[split.item_id] +=
+              parseInt(split.quantity) / parseInt(split.split);
+            num_adjusted[split.item_id] += 1;
+          }
+        } else {
+          if (split.split == "0") automatic_split[split.item_id] = 1;
+          else {
+            qty_offset[split.item_id] =
+              parseInt(split.quantity) / parseInt(split.split);
+            num_adjusted[split.item_id] = 1;
+          }
         }
       }
 
       const my_items: { [key: string]: { [key: string]: number } } = {};
       let my_total = 0.0;
       for (const split of splits) {
+        const split_quantity =
+          split.split == "0"
+            ? parseFloat(split.quantity) - qty_offset[split.item_id]
+            : parseFloat(split.quantity);
         const split_amount =
           split.split == "0"
             ? automatic_split[split.item_id].toString()
@@ -183,11 +191,10 @@ export default function Dashboard({
           if (!my_items.hasOwnProperty(split.item_id)) {
             my_items[split.item_id] = { quantity: 0, split: 0 };
           }
-          my_items[split.item_id].quantity = parseInt(split.quantity);
+          my_items[split.item_id].quantity = split_quantity;
           my_items[split.item_id].split = parseInt(split_amount);
           my_total +=
-            (parseInt(split.quantity) *
-              parseFloat(receipt_items[split.item_id].price)) /
+            (split_quantity * parseFloat(receipt_items[split.item_id].price)) /
             parseInt(split_amount);
         }
         receipt_items[split.item_id].consumers.push(

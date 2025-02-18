@@ -177,7 +177,7 @@ export default function EditReceiptPage({
       );
     }
     await Promise.all(promises);
-    router.push(`/${receipt_id}/split`);
+    router.push(`/${receipt_id}/live`);
   };
 
   return (

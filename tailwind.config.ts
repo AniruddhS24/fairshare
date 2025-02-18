@@ -20,6 +20,7 @@ const config: Config = {
         darkest: "#1C2B35",
         midgray: "#5F758A",
         lightgray: "#C1C9D0",
+        lightgraytransparent: "#C1C9D063",
       },
       fontFamily: {
         sans: ["Helvetica Neue", "sans-serif"],
