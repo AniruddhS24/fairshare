@@ -206,12 +206,12 @@ function UserOnboardingPage() {
         value={phoneNumber}
         setValue={setPhoneNumber}
       />
-      <Spacer size="medium" />
+      {/* <Spacer size="medium" />
       <TextInput
         placeholder="Venmo Handle (optional)"
         value={venmoHandle}
         setValue={setVenmoHandle}
-      />
+      /> */}
       <Spacer size="large" />
       <StickyButton
         label="Next"

@@ -189,8 +189,8 @@ export default function LiveReceiptPage({
       try {
         await navigator.share({
           title: "FairShare",
-          text: "View your payment breakdown with FairShare",
-          url: `https://splitmyreceipt.com/${params.receiptid}/live`,
+          text: "Split your receipt with FairShare",
+          url: `https://splitmyreceipt.com/user?receiptid=${params.receiptid}&onboardConsumer=true`,
         });
         console.log("Content shared successfully");
       } catch (error) {
