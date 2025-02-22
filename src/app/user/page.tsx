@@ -114,7 +114,7 @@ function UserOnboardingPage() {
   const [loading, setLoading] = useState(false);
   const [name, setName] = useState<string>("");
   const [phoneNumber, setPhoneNumber] = useState<string>("");
-  const [venmoHandle, setVenmoHandle] = useState<string>("");
+  const [venmoHandle] = useState<string>("");
   const [code, setCode] = useState<string>("");
   const [waitingForCode, setWaitingForCode] = useState(false);
 
