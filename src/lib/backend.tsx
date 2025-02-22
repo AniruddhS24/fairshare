@@ -40,12 +40,16 @@ export async function backend<T>(
 }
 
 // Receipts
-interface Receipt {
+export interface Receipt {
   id: string;
   image_url: string;
   shared_cost: string;
   grand_total: string;
   settled: boolean;
+}
+
+export async function createEmptyReceipt(): Promise<Receipt> {
+  return await backend("POST", `/receipt`, {});
 }
 
 export async function getReceipt(receipt_id: string): Promise<Receipt> {

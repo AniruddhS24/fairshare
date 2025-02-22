@@ -131,7 +131,7 @@ function UserOnboardingPage() {
           } catch {
             await createRole(receipt_id, Permission.CONSUMER);
           }
-          router.push(`/${receipt_id}/split`);
+          router.push(`/${receipt_id}/live`);
         } else if (page) {
           router.push(`/${receipt_id}/${page}`);
         }

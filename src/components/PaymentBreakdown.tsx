@@ -1,32 +1,27 @@
 import React, { useEffect, useState } from "react";
-import Text from "./Text";
+import { ChevronDown, ChevronUp } from "lucide-react";
+import Text from "@/components/Text";
+import LineItem from "@/components/LineItem";
 import { Item, Split } from "@/lib/backend";
-import { Bell } from "lucide-react";
 
-interface ConsumerBreakdownProps {
+interface PaymentBreakdownProps {
   items: { [key: string]: Item };
   splits: { [key: string]: Split };
   user_id: string;
-  user_name: string;
   sharedCharges: string;
-  isHost: boolean;
-  handleReminder: (name: string) => void;
 }
 
 interface MyItem {
   name: string;
   price: string;
 }
-
-const ConsumerBreakdown: React.FC<ConsumerBreakdownProps> = ({
+const PaymentBreakdown: React.FC<PaymentBreakdownProps> = ({
   items,
   splits,
   user_id,
-  user_name,
   sharedCharges,
-  isHost,
-  handleReminder,
 }) => {
+  const [isOpen, setIsOpen] = useState(false);
   const [total, setTotal] = useState<number>(0.0);
   const [myItems, setMyItems] = useState<{ [key: string]: MyItem }>({});
 
@@ -66,41 +61,45 @@ const ConsumerBreakdown: React.FC<ConsumerBreakdownProps> = ({
   }, [items, splits]);
 
   return (
-    <div className="w-full mb-2">
-      <div className="flex justify-between items-center w-full">
-        <div className="flex items-center gap-2">
-          <Text type="body_bold" className="text-darkest">
-            {user_name}
-          </Text>
-          {isHost ? (
-            <span className="px-2 py-1 font-bold text-sm text-primary bg-accentlight rounded-md">
-              Host
-            </span>
-          ) : (
-            <Bell
-              className="w-5 h-5 text-primary"
-              onClick={() => {
-                handleReminder(user_name);
-              }}
-            />
-          )}
-        </div>
-        <Text type="body_bold" className="text-midgray">
-          ${total.toFixed(2)}
+    <div className="w-full max-w-md mx-auto border border-lightgray rounded-lg overflow-hidden">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex justify-between items-center p-3"
+      >
+        <Text type="m_heading" className="text-darkest">
+          My Total
         </Text>
-      </div>
-      {Object.values(myItems).map((item, index) => (
-        <div className="flex justify-between items-center w-full" key={index}>
-          <Text className="text-darkest">{item.name}</Text>
-          <Text className="text-midgray">{item.price}</Text>
+        <div className="flex items-center gap-2">
+          <Text type="m_heading" className="text-primary">
+            ${total.toFixed(2)}
+          </Text>
+          {isOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
         </div>
-      ))}
-      <div className="flex justify-between items-center w-full">
-        <Text className="text-midgray">Shared Charges</Text>
-        <Text className="text-midgray">{sharedCharges}</Text>
+      </button>
+
+      <div
+        className={`transition-all duration-500 ease-in-out px-3 ${
+          isOpen ? "max-h-[200px] opacity-100" : "max-h-0 opacity-0"
+        } overflow-hidden bg-white`}
+      >
+        {Object.values(myItems).map((item, index) => (
+          <div key={index} className="flex justify-between">
+            <LineItem
+              label={item.name}
+              price={parseFloat(item.price)}
+              labelColor="text-darkest"
+            ></LineItem>
+          </div>
+        ))}
+        <LineItem
+          label="Shared Charges"
+          price={parseFloat(sharedCharges)}
+          labelColor="text-midgray"
+          className="pb-3"
+        ></LineItem>
       </div>
     </div>
   );
 };
 
-export default ConsumerBreakdown;
+export default PaymentBreakdown;

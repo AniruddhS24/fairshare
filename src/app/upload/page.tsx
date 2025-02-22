@@ -14,7 +14,7 @@ import {
   Permission,
   AuthStatus,
 } from "@/contexts/GlobalContext";
-import { backend, getUploadLink } from "@/lib/backend";
+import { backend, createEmptyReceipt, getUploadLink } from "@/lib/backend";
 
 export default function UploadReceiptPage() {
   const { status } = useGlobalContext();
@@ -41,9 +41,9 @@ export default function UploadReceiptPage() {
     }
   };
 
-  const openCamera = () => {
-    document.getElementById("cameraInput")?.click();
-  };
+  // const openCamera = () => {
+  //   document.getElementById("cameraInput")?.click();
+  // };
 
   const openFileInput = () => {
     document.getElementById("fileInput")?.click();
@@ -52,6 +52,14 @@ export default function UploadReceiptPage() {
   const getPresignedUrl = async () => {
     const data = await getUploadLink();
     return data.presigned_url;
+  };
+
+  const handleCreateReceipt = async () => {
+    const receipt = await createEmptyReceipt();
+    await backend("POST", `/receipt/${receipt.id}/role`, {
+      role: Permission.HOST,
+    });
+    router.push(`/${receipt.id}/editreceipt`);
   };
 
   const handleSplitReceipt = async () => {
@@ -115,15 +123,15 @@ export default function UploadReceiptPage() {
       <Spacer size="large" />
       <div className="w-full grid grid-cols-2 gap-4">
         <SquareButton
-          label="Take a Photo"
+          label="Enter Manually"
           color="accent"
-          icon="fa-camera"
-          onClick={openCamera}
+          icon="fa-pen-to-square"
+          onClick={handleCreateReceipt}
         />
         <SquareButton
-          label="Photo Library"
+          label="Scan Receipt"
           color="primary"
-          icon="fa-images"
+          icon="fa-camera"
           onClick={openFileInput}
         />
       </div>

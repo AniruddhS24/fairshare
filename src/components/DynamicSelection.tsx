@@ -15,6 +15,7 @@ interface DynamicSelectionProps {
   users: { [key: string]: User };
   splits: { [key: string]: Split };
   setSplits: React.Dispatch<React.SetStateAction<{ [key: string]: Split }>>;
+  disabled: boolean;
 }
 
 const DynamicSelection: React.FC<DynamicSelectionProps> = ({
@@ -23,6 +24,7 @@ const DynamicSelection: React.FC<DynamicSelectionProps> = ({
   users,
   splits,
   setSplits,
+  disabled,
 }) => {
   const { user } = useGlobalContext();
   const [groupedSplits, setGroupedSplits] = useState<{
@@ -50,7 +52,7 @@ const DynamicSelection: React.FC<DynamicSelectionProps> = ({
       console.log("split " + currentSplitKey);
       if (splits[currentSplitKey]) {
         console.log("split exists");
-        await deleteSplit(receipt_id, currentSplitKey);
+        deleteSplit(receipt_id, currentSplitKey);
         setSplits((prevSplits) => {
           const updatedSplits = { ...prevSplits };
           delete updatedSplits[currentSplitKey];
@@ -80,7 +82,7 @@ const DynamicSelection: React.FC<DynamicSelectionProps> = ({
           return updatedSplits;
         });
 
-        await createSplit(receipt_id, itemId, splitId);
+        createSplit(receipt_id, itemId, splitId);
       }
     } catch (error) {
       console.error("Error updating split:", error);
@@ -135,6 +137,7 @@ const DynamicSelection: React.FC<DynamicSelectionProps> = ({
                     onClick={() =>
                       handleBubbleClick(item.id, key.split("_")[1])
                     }
+                    disabled={disabled}
                   >
                     {isFilled ? userNames : ""}
                   </button>
@@ -147,7 +150,7 @@ const DynamicSelection: React.FC<DynamicSelectionProps> = ({
                     i !== 0 ? "bg-lightgraytransparent" : ""
                   }`}
                   onClick={() => handleBubbleClick(item.id, null)}
-                  disabled={i !== 0}
+                  disabled={disabled || i !== 0}
                 />
               ))}
             </div>
