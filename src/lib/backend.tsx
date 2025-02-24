@@ -1,4 +1,4 @@
-const apiUrl = "https://6tfoowsh0b.execute-api.us-east-1.amazonaws.com/prod";
+const apiUrl = "https://67slbfhmid.execute-api.us-east-1.amazonaws.com/prod";
 
 export async function backend<T>(
   method: "GET" | "POST" | "PUT" | "DELETE",
@@ -30,10 +30,10 @@ export async function backend<T>(
     if ("data" in response_body) {
       return response_body.data;
     }
-    console.log(response_body);
+    // console.log(response_body);
     return response_body;
   } catch (error) {
-    console.log(method);
+    // console.log(method);
     console.error("There was a problem!", error);
     throw error; // Rethrow the error for further handling
   }
@@ -45,6 +45,7 @@ export interface Receipt {
   image_url: string;
   shared_cost: string;
   grand_total: string;
+  addl_gratuity: string;
   settled: boolean;
 }
 
@@ -202,7 +203,10 @@ export async function createOTP(phone: string): Promise<{ otp: string }> {
 }
 
 // TODO: don't need to return promises
-export async function verifyOTP(phone: string, otp: number) {
+export async function verifyOTP(
+  phone: string,
+  otp: number
+): Promise<{ user_exists: boolean; message: string }> {
   return await backend("POST", `/otp_verify`, { phone, otp });
 }
 

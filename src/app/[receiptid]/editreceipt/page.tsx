@@ -26,6 +26,7 @@ import {
   createItem,
   deleteItem,
 } from "@/lib/backend";
+import PercentageInput from "@/components/PercentageInput";
 
 interface EditItemProps {
   id: string | null;
@@ -47,6 +48,14 @@ export default function EditReceiptPage({
   const [receiptItems, setReceiptItems] = useState<EditItemProps[]>([]);
   const [sharedCharges, setSharedCharges] = useState({
     value: "0.00",
+    edited: false,
+  });
+  const [additionalGratuity, setAdditionalGratuity] = useState({
+    value: "0",
+    edited: false,
+  });
+  const [additionalGratuityPct, setAdditionalGratuityPct] = useState({
+    value: "0",
     edited: false,
   });
   const [counter, setCounter] = useState(0);
@@ -73,13 +82,13 @@ export default function EditReceiptPage({
     const fetchData = async () => {
       const receipt = await getReceipt(receipt_id);
       if (receipt.settled) {
-        router.push(`/${receipt_id}/dashboard`);
+        router.push(`/${receipt_id}/live`);
       }
-      setSharedCharges({ value: receipt.shared_cost, edited: false });
 
       const items = [];
       let ct = counter;
       const receipt_items = await getItems(receipt_id);
+      let total = 0;
       for (const item of receipt_items) {
         items.push({
           id: item.id,
@@ -91,9 +100,22 @@ export default function EditReceiptPage({
           deleted: false,
         });
         ct++;
+        total += parseInt(item.quantity) * parseFloat(item.price);
       }
       setCounter(ct);
-      setReceiptItems(items);
+      if (items.length == 0) addItem();
+      else setReceiptItems(items);
+
+      setSharedCharges({ value: receipt.shared_cost, edited: false });
+      setAdditionalGratuity({ value: receipt.addl_gratuity, edited: false });
+      const newPct = (
+        (parseFloat(receipt.addl_gratuity) / total) *
+        100
+      ).toFixed(0);
+      setAdditionalGratuityPct({
+        value: newPct,
+        edited: true,
+      });
     };
 
     fetchData().then(() => setLoading(false));
@@ -138,8 +160,10 @@ export default function EditReceiptPage({
     setReceiptItems(newReceiptItems);
   };
 
-  const calculateTotal = () => {
-    let total = parseFloat(sharedCharges.value);
+  const calculateTotal = (subtotal: boolean) => {
+    let total =
+      parseFloat(sharedCharges.value) + parseFloat(additionalGratuity.value);
+    if (subtotal) total = 0;
     receiptItems
       .filter((item) => !item.deleted)
       .forEach((item) => {
@@ -171,8 +195,9 @@ export default function EditReceiptPage({
     if (receipt_changed) {
       promises.push(
         backend("PUT", `/receipt/${receipt_id}`, {
+          addl_gratuity: additionalGratuity.value,
           shared_cost: sharedCharges.value,
-          grand_total: calculateTotal().toFixed(2),
+          grand_total: calculateTotal(false).toFixed(2),
         })
       );
     }
@@ -193,28 +218,28 @@ export default function EditReceiptPage({
       <Spacer size="large" />
       {!loading ? (
         <div className="w-full">
-          <div className="grid grid-cols-9 gap-y-3 w-full">
+          <div className="grid grid-cols-12 gap-y-3 w-full">
             {receiptItems
               .filter((item) => !item.deleted)
               .map((item) => (
                 <div
-                  className="col-span-9 grid grid-cols-9 items-center gap-x-1 gap-y-3"
+                  className="col-span-12 grid grid-cols-12 items-center gap-x-1 gap-y-3"
                   key={item.index}
                 >
-                  <div className="col-span-4 flex justify-center items-center">
+                  <div className="col-span-5 flex justify-center items-center">
                     <ItemInput
                       placeholder="Item name"
                       value={item.name}
                       setValue={setItemProp(item.index, "name")}
                     />
                   </div>
-                  <div className="col-span-2 flex justify-center items-center">
+                  <div className="col-span-3 flex justify-center items-center">
                     <QuantityInput
                       value={parseInt(item.quantity)}
                       setValue={setItemProp(item.index, "quantity")}
                     />
                   </div>
-                  <div className="col-span-2 flex justify-center items-center">
+                  <div className="col-span-3 flex justify-center items-center">
                     <PriceInput
                       value={item.price}
                       setValue={setItemProp(item.index, "price")}
@@ -235,37 +260,84 @@ export default function EditReceiptPage({
               ))}
           </div>
           <Spacer size="medium" />
-          <ModifyButton
-            label="Add Item"
-            icon="fa-plus"
-            onClick={() => addItem()}
+          <div className="w-full flex justify-end">
+            <ModifyButton
+              label="Add Item"
+              icon="fa-plus"
+              onClick={() => addItem()}
+            />
+          </div>
+          <Spacer size="small" />
+          <LineItem
+            label="Subtotal"
+            price={calculateTotal(true)}
+            labelColor="text-midgray"
+            bold
           />
           <Spacer size="medium" />
-          <div className="col-span-8 grid grid-cols-8 items-center gap-2">
-            <div className="col-span-3 flex justify-start items-center">
-              <Text type="body_bold" className="text-darkest">
-                Shared Charges
+          <Text type="body_bold" className="text-darkest">
+            Shared Charges
+          </Text>
+          <div className="col-span-12 grid grid-cols-12 items-center gap-2">
+            <div className="col-span-9 flex justify-start items-center">
+              <Text type="body_semi" className="text-darkest">
+                Tax + Other Fees
               </Text>
             </div>
-            <div className="col-span-2"></div>
-            <div className="col-span-2 flex justify-center items-center">
+            <div className="col-span-3 flex justify-center items-center">
               <PriceInput
                 value={sharedCharges.value}
                 setValue={(value) => setSharedCharges({ value, edited: true })}
               />
             </div>
-            <button
-              onClick={() => alert("Shared charges are...")}
-              className="col-span-1 flex justify-center items-center transition-transform duration-200 active:scale-90"
-            >
-              <i className="fas fa-info-circle text-midgray"></i>
-            </button>
+          </div>
+          <Spacer size="small" />
+          <div className="col-span-12 grid grid-cols-12 items-center gap-2">
+            <div className="col-span-6 flex justify-start items-center">
+              <Text type="body_semi" className="text-darkest">
+                Tip
+              </Text>
+            </div>
+            <div className="col-span-3 flex justify-center items-center">
+              <PercentageInput
+                value={additionalGratuityPct.value}
+                setValue={(value) => {
+                  const newPct = parseInt(value);
+                  const newDollarAmount = (
+                    calculateTotal(true) *
+                    (newPct / 100)
+                  ).toFixed(2);
+                  setAdditionalGratuity({
+                    value: newDollarAmount,
+                    edited: true,
+                  });
+                  setAdditionalGratuityPct({ value, edited: true });
+                }}
+              />
+            </div>
+            <div className="col-span-3 flex justify-center items-center">
+              <PriceInput
+                value={additionalGratuity.value}
+                setValue={(value) => {
+                  const newDollarAmount = parseFloat(value);
+                  const newPct = (
+                    (newDollarAmount / calculateTotal(true)) *
+                    100
+                  ).toFixed(0);
+                  setAdditionalGratuityPct({
+                    value: newPct,
+                    edited: true,
+                  });
+                  setAdditionalGratuity({ value, edited: true });
+                }}
+              />
+            </div>
           </div>
           <Spacer size="medium" />
           <LineItem
             label="Grand Total"
-            price={calculateTotal()}
-            labelColor="text-darkest"
+            price={calculateTotal(false)}
+            labelColor="text-primary"
             bold
           />
           <Spacer size="large" />

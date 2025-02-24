@@ -1,5 +1,5 @@
-import React from 'react';
-import Text from './Text';
+import React from "react";
+import Text from "./Text";
 
 interface ModifyButtonProps {
   label: string;
@@ -7,17 +7,22 @@ interface ModifyButtonProps {
   onClick: () => void;
 }
 
-const ModifyButton: React.FC<ModifyButtonProps> = ({ label, icon, onClick}) => {
-
+const ModifyButton: React.FC<ModifyButtonProps> = ({
+  label,
+  icon,
+  onClick,
+}) => {
   return (
     <button
-    onClick={onClick}
-    className={`self-end transition-transform duration-200 active:scale-90`}
+      onClick={onClick}
+      className={`transition-transform duration-200 active:scale-90`}
     >
-        <div className="flex justify-center items-center">
-          <i className={`fa-solid ${icon} text-primary fa-md me-1`}></i>
-          <Text type="s_heading" className="text-primary">{label}</Text>
-        </div>
+      <div className="flex justify-center items-center">
+        <i className={`fa-solid ${icon} text-primary fa-md me-1`}></i>
+        <Text type="s_heading" className="text-primary">
+          {label}
+        </Text>
+      </div>
     </button>
   );
 };

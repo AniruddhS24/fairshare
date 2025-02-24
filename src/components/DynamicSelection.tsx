@@ -16,6 +16,8 @@ interface DynamicSelectionProps {
   splits: { [key: string]: Split };
   setSplits: React.Dispatch<React.SetStateAction<{ [key: string]: Split }>>;
   disabled: boolean;
+  unclaimedItems: boolean;
+  setUnclaimedItems: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const DynamicSelection: React.FC<DynamicSelectionProps> = ({
@@ -25,6 +27,8 @@ const DynamicSelection: React.FC<DynamicSelectionProps> = ({
   splits,
   setSplits,
   disabled,
+  unclaimedItems,
+  setUnclaimedItems,
 }) => {
   const { user } = useGlobalContext();
   const [groupedSplits, setGroupedSplits] = useState<{
@@ -46,43 +50,69 @@ const DynamicSelection: React.FC<DynamicSelectionProps> = ({
   }, [splits]);
 
   const handleBubbleClick = async (itemId: string, splitId: string | null) => {
-    const user_id = user?.id;
+    if (!user?.id) return;
+    if (splitId && splitId.startsWith("temp")) return;
+    setUnclaimedItems(false);
+    const user_id = user.id;
+    const existingSplitKey = `${itemId}_${splitId}_${user_id}`;
+    const tempSplitId = `temp${Date.now()}`;
+
     try {
-      const currentSplitKey = `${itemId}_${splitId}_${user_id}`;
-      console.log("split " + currentSplitKey);
-      if (splits[currentSplitKey]) {
-        console.log("split exists");
-        deleteSplit(receipt_id, currentSplitKey);
-        setSplits((prevSplits) => {
-          const updatedSplits = { ...prevSplits };
-          delete updatedSplits[currentSplitKey];
-          return updatedSplits;
-        });
-      } else {
-        if (splitId == null) {
-          const newId = await getNewSplitID(receipt_id, itemId); // Get a new split ID
-          splitId = newId.toString();
-          console.log("Got new split " + splitId + "for item " + itemId);
-          // splitId = (
-          //   Object.entries(groupedSplits).filter(([key]) =>
-          //     key.startsWith(itemId)
-          //   ).length + 1
-          // ).toString();
-        }
-        console.log("split exists");
-        setSplits((prevSplits) => {
-          const updatedSplits = { ...prevSplits };
-          updatedSplits[`${itemId}_${splitId}_${user_id}`] = {
-            id: `${itemId}_${splitId}_${user_id}`,
-            receipt_id: receipt_id,
-            user_id: user_id || "",
+      setSplits((prevSplits) => {
+        const updatedSplits = { ...prevSplits };
+
+        if (splitId && updatedSplits[existingSplitKey]) {
+          delete updatedSplits[existingSplitKey];
+        } else if (splitId) {
+          updatedSplits[existingSplitKey] = {
+            id: existingSplitKey,
+            receipt_id,
+            user_id,
             item_id: itemId,
-            split_id: splitId || "",
+            split_id: splitId,
           };
+        } else {
+          updatedSplits[`${itemId}_${tempSplitId}_${user_id}`] = {
+            id: `${itemId}_${tempSplitId}_${user_id}`,
+            receipt_id,
+            user_id,
+            item_id: itemId,
+            split_id: tempSplitId,
+          };
+        }
+
+        return updatedSplits;
+      });
+
+      if (splitId) {
+        if (splits[existingSplitKey]) {
+          await deleteSplit(receipt_id, existingSplitKey);
+        } else {
+          await createSplit(receipt_id, itemId, splitId);
+        }
+        return;
+      }
+
+      if (!splitId) {
+        const newId = await getNewSplitID(receipt_id, itemId);
+        const realKey = `${itemId}_${newId}_${user_id}`;
+
+        setSplits((prevSplits) => {
+          const updatedSplits = { ...prevSplits };
+
+          if (updatedSplits[tempSplitId]) {
+            updatedSplits[realKey] = {
+              ...updatedSplits[tempSplitId],
+              id: realKey,
+              split_id: newId.toString(),
+            };
+            delete updatedSplits[tempSplitId];
+          }
+
           return updatedSplits;
         });
 
-        createSplit(receipt_id, itemId, splitId);
+        await createSplit(receipt_id, itemId, newId.toString());
       }
     } catch (error) {
       console.error("Error updating split:", error);
@@ -93,11 +123,11 @@ const DynamicSelection: React.FC<DynamicSelectionProps> = ({
     <div className="flex justify-between items-center w-full flex-col">
       {Object.values(items).map((item, index) => {
         const existingSplitsForItem = Object.entries(groupedSplits)
-          .filter(([key]) => key.startsWith(item.id)) // Filter for item_id
+          .filter(([key]) => key.startsWith(item.id))
           .sort(([keyA], [keyB]) => {
             const splitIdA = parseInt(keyA.split("_")[1]);
             const splitIdB = parseInt(keyB.split("_")[1]);
-            return splitIdA - splitIdB; // Sort by split_id
+            return splitIdA - splitIdB;
           });
 
         const numExistingSplits = existingSplitsForItem.length;
@@ -107,7 +137,7 @@ const DynamicSelection: React.FC<DynamicSelectionProps> = ({
           <div key={index} className="w-full mb-4">
             <LineItem
               label={item.quantity + " " + item.name}
-              price={parseFloat(item.price)}
+              price={parseFloat(item.price) * parseInt(item.quantity)}
               labelColor="text-darkest"
               bold
             />
@@ -120,6 +150,7 @@ const DynamicSelection: React.FC<DynamicSelectionProps> = ({
                 const userNames = isFilled
                   ? splitGroup
                       .map((split) => users[split.user_id]?.name || "Unknown")
+                      .sort((a, b) => a.localeCompare(b))
                       .join(", ")
                   : "";
                 return (
@@ -146,8 +177,16 @@ const DynamicSelection: React.FC<DynamicSelectionProps> = ({
               {Array.from({ length: numRemainingBubbles }, (_, i) => (
                 <button
                   key={numExistingSplits + i}
-                  className={`w-10 h-10 rounded-full border border-lightgray ${
-                    i !== 0 ? "bg-lightgraytransparent" : ""
+                  className={`w-10 h-10 rounded-full border-2 ${
+                    unclaimedItems ? "border-red-700" : "border-lightgray"
+                  } ${
+                    unclaimedItems
+                      ? i !== 0
+                        ? "border-dotted bg-red-200"
+                        : "bg-red-200"
+                      : i !== 0
+                      ? "border-dotted bg-lightgraytransparent"
+                      : "bg-white"
                   }`}
                   onClick={() => handleBubbleClick(item.id, null)}
                   disabled={disabled || i !== 0}

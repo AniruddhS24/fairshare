@@ -17,8 +17,6 @@ import {
 } from "@/contexts/GlobalContext";
 import { createRole, getUserRole, createOTP, verifyOTP } from "@/lib/backend";
 
-const OTP_ENABLED = false;
-
 interface PhoneVerificationProps {
   phoneNumber: string;
   code: string;
@@ -117,6 +115,7 @@ function UserOnboardingPage() {
   const [venmoHandle] = useState<string>("");
   const [code, setCode] = useState<string>("");
   const [waitingForCode, setWaitingForCode] = useState(false);
+  const [newUserSignup, setNewUserSignup] = useState(false);
 
   const receipt_id = searchParams.get("receiptid");
   const onboardConsumer = searchParams.get("onboardConsumer");
@@ -151,37 +150,51 @@ function UserOnboardingPage() {
   }, [status, receipt_id, page, onboardConsumer]);
 
   const handleNext = async () => {
-    if (!OTP_ENABLED) {
-      const userData = {
-        id: null,
-        name: name,
-        phone: phoneNumber,
-        venmo_handle: venmoHandle.replace("@", ""),
-      };
-      await login(userData);
-    } else {
-      await createOTP(phoneNumber);
-      setWaitingForCode(true);
-    }
+    // if (!OTP_ENABLED) {
+    //   const userData = {
+    //     id: null,
+    //     name: name,
+    //     phone: phoneNumber,
+    //     venmo_handle: venmoHandle.replace("@", ""),
+    //   };
+    //   await login(userData);
+    // } else {
+    //   await createOTP(phoneNumber);
+    //   setWaitingForCode(true);
+    // }
+    await createOTP(phoneNumber);
+    setWaitingForCode(true);
+  };
+
+  const handleSignupNext = async () => {
+    const userData = {
+      id: null,
+      name: name,
+      phone: phoneNumber,
+      venmo_handle: venmoHandle.replace("@", ""),
+    };
+    await login(userData);
   };
 
   const handleCode = async (code: string) => {
     try {
-      await verifyOTP(phoneNumber, parseInt(code));
+      const response = await verifyOTP(phoneNumber, parseInt(code));
       const userData = {
         id: null,
         name: name,
         phone: phoneNumber,
         venmo_handle: venmoHandle.replace("@", ""),
       };
-      await login(userData);
+      if (!response.user_exists) {
+        setNewUserSignup(true);
+      } else {
+        await login(userData);
+      }
     } catch (error) {
       console.log(error);
       setCode("");
     }
   };
-
-  const isNextDisabled = !name || !phoneNumber;
 
   return loading ? (
     <div className="flex w-full items-center justify-center">
@@ -193,14 +206,12 @@ function UserOnboardingPage() {
       <Image src="/logo.png" alt="Logo" width={250} height={100} />
       <Spacer size="large" />
       <Text type="m_heading" className="text-darkest">
-        Enter Information
+        Sign In
       </Text>
       <Text type="body" className="text-center text-midgray">
         Get started splitting receipts seamlessly
       </Text>
       <Spacer size="large" />
-      <TextInput placeholder="Name" value={name} setValue={setName} />
-      <Spacer size="medium" />
       <PhoneInput
         placeholder="Phone number"
         value={phoneNumber}
@@ -213,11 +224,7 @@ function UserOnboardingPage() {
         setValue={setVenmoHandle}
       /> */}
       <Spacer size="large" />
-      <StickyButton
-        label="Next"
-        onClick={handleNext}
-        disabled={isNextDisabled}
-      />
+      <StickyButton label="Next" onClick={handleNext} disabled={!phoneNumber} />
       <Spacer size="large" />
       <Text type="body" className="text-center text-midgray text-xs">
         By providing your phone number, you consent to receive SMS messages from
@@ -230,6 +237,35 @@ function UserOnboardingPage() {
           Privacy policy
         </a>
       </Text>
+    </Container>
+  ) : newUserSignup ? (
+    <Container centered>
+      <Spacer size="large" />
+      <Image src="/logo.png" alt="Logo" width={250} height={100} />
+      <Spacer size="large" />
+      <Text type="m_heading" className="text-darkest">
+        Enter Information
+      </Text>
+      <Text type="body" className="text-center text-midgray">
+        Enter your name to create an account
+      </Text>
+      <Spacer size="large" />
+      <PhoneInput
+        placeholder="Phone number"
+        value={phoneNumber}
+        setValue={setPhoneNumber}
+        disabled
+      />
+      <Spacer size="medium" />
+      <TextInput placeholder="Name" value={name} setValue={setName} />
+      {/* <Spacer size="medium" />
+      <TextInput
+        placeholder="Venmo Handle (optional)"
+        value={venmoHandle}
+        setValue={setVenmoHandle}
+      /> */}
+      <Spacer size="large" />
+      <StickyButton label="Next" onClick={handleSignupNext} disabled={!name} />
     </Container>
   ) : (
     <PhoneVerification

@@ -55,7 +55,6 @@ export const GlobalProvider = ({ children }: { children: ReactNode }) => {
   const readJWT = () => {
     const jwt = localStorage.getItem("jwt");
     if (jwt) {
-      console.log(jwt);
       getUserFromJWT()
         .then((data) => {
           setUser({
@@ -64,7 +63,6 @@ export const GlobalProvider = ({ children }: { children: ReactNode }) => {
             phone: data.phone,
             venmo_handle: data.venmo_handle,
           });
-          console.log("User found:", data);
           setStatus(AuthStatus.AUTHORIZED);
         })
         .catch(() => {

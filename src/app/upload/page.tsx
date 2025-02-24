@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Text from "../../components/Text";
+import Image from "next/image";
 import LogoutSection from "@/components/LogoutSection";
 import SquareButton from "../../components/SquareButton";
 import Spacer from "@/components/Spacer";
@@ -15,12 +16,14 @@ import {
   AuthStatus,
 } from "@/contexts/GlobalContext";
 import { backend, createEmptyReceipt, getUploadLink } from "@/lib/backend";
+import Spinner from "@/components/Spinner";
 
 export default function UploadReceiptPage() {
   const { status } = useGlobalContext();
   const router = useRouter();
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (status === AuthStatus.CHECKING) {
@@ -55,6 +58,7 @@ export default function UploadReceiptPage() {
   };
 
   const handleCreateReceipt = async () => {
+    setLoading(true);
     const receipt = await createEmptyReceipt();
     await backend("POST", `/receipt/${receipt.id}/role`, {
       role: Permission.HOST,
@@ -117,24 +121,36 @@ export default function UploadReceiptPage() {
     <Container centered>
       <LogoutSection></LogoutSection>
       <Spacer size="large" />
+      <Image src="/logo.png" alt="Logo" width={250} height={100} />
+      <Spacer size="large" />
       <Text type="m_heading" className="text-darkest">
-        Upload Your Receipt
+        Upload Receipt
+      </Text>
+      <Text type="body" className="text-center text-midgray">
+        Upload your receipt to create a live link where your friends can add
+        their shares!
       </Text>
       <Spacer size="large" />
-      <div className="w-full grid grid-cols-2 gap-4">
-        <SquareButton
-          label="Enter Manually"
-          color="accent"
-          icon="fa-pen-to-square"
-          onClick={handleCreateReceipt}
-        />
-        <SquareButton
-          label="Scan Receipt"
-          color="primary"
-          icon="fa-camera"
-          onClick={openFileInput}
-        />
-      </div>
+      {!loading ? (
+        <div className="w-full grid grid-cols-2 gap-4 ">
+          <SquareButton
+            label="Enter Manually"
+            color="accent"
+            icon="fa-pen-to-square"
+            onClick={handleCreateReceipt}
+          />
+          <SquareButton
+            label="Scan Receipt"
+            color="primary"
+            icon="fa-camera"
+            onClick={openFileInput}
+          />
+        </div>
+      ) : (
+        <div className="flex w-full items-center justify-center">
+          <Spinner color="text-primary" />
+        </div>
+      )}
       <input
         type="file"
         accept="image/*"

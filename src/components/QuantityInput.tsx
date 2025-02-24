@@ -36,7 +36,7 @@ const QuantityInput: React.FC<QuantityInputProps> = ({
         type="number"
         value={value == 0 ? "" : value.toString()}
         readOnly
-        className="w-full font-normal text-darkest shadow-custom-light placeholder-midgray rounded-xl p-2 text-center focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
+        className="w-full font-normal text-darkest border border-lightgray placeholder-midgray rounded-xl p-2 text-center focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
       />
       <button onClick={handleIncrease}>
         <i className="fas fa-plus p-1 text-midgray transition-transform duration-200 active:scale-90"></i>{" "}

@@ -8,7 +8,7 @@ interface ConsumerBreakdownProps {
   splits: { [key: string]: Split };
   user_id: string;
   user_name: string;
-  sharedCharges: string;
+  sharedCharges: string | null;
   isHost: boolean;
   handleReminder: (name: string) => void;
 }
@@ -43,13 +43,14 @@ const ConsumerBreakdown: React.FC<ConsumerBreakdownProps> = ({
       }
     }
     for (const split of Object.values(splits)) {
+      if (!(split.item_id in items)) continue;
       const split_key = `${split.item_id}_${split.split_id}`;
       if (split.user_id == user_id) {
-        my_items[split.item_id] = {
-          name:
-            items[split.item_id].name +
-            " / " +
-            split_counts[split_key].toString(),
+        let name = items[split.item_id].name;
+        if (split_counts[split_key] > 1)
+          name += " / " + split_counts[split_key].toString();
+        my_items[split_key] = {
+          name: name,
           price: (
             parseFloat(items[split.item_id].price) / split_counts[split_key]
           ).toFixed(2),
@@ -63,7 +64,7 @@ const ConsumerBreakdown: React.FC<ConsumerBreakdownProps> = ({
     }
     setTotal(total);
     setMyItems(my_items);
-  }, [items, splits]);
+  }, [items, splits, sharedCharges]);
 
   return (
     <div className="w-full mb-2">
@@ -95,10 +96,12 @@ const ConsumerBreakdown: React.FC<ConsumerBreakdownProps> = ({
           <Text className="text-midgray">{item.price}</Text>
         </div>
       ))}
-      <div className="flex justify-between items-center w-full">
-        <Text className="text-midgray">Shared Charges</Text>
-        <Text className="text-midgray">{sharedCharges}</Text>
-      </div>
+      {sharedCharges ? (
+        <div className="flex justify-between items-center w-full">
+          <Text className="text-midgray">Shared Charges</Text>
+          <Text className="text-midgray">{sharedCharges}</Text>
+        </div>
+      ) : null}
     </div>
   );
 };

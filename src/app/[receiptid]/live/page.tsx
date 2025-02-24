@@ -53,6 +53,23 @@ const HostActionButton: React.FC<HostActionButtonProps> = ({
   );
 };
 
+const UnclaimedItemsBanner: React.FC<{
+  setRemindAll: React.Dispatch<React.SetStateAction<boolean>>;
+}> = ({ setRemindAll }) => {
+  return (
+    <div className="w-full flex justify-center items-center bg-red-200 text-red-700 rounded-md p-2 mb-4">
+      <i className={"fas fa-circle-exclamation mr-1 text-red-700"}></i>
+      There are still unclaimed items.{" "}
+      <button
+        className="font-bold text-primary focus:outline-none ms-1"
+        onClick={() => setRemindAll(true)}
+      >
+        Remind all?
+      </button>
+    </div>
+  );
+};
+
 export default function LiveReceiptPage({
   params,
 }: {
@@ -63,9 +80,10 @@ export default function LiveReceiptPage({
   const [receipt, setReceipt] = useState<Receipt>({
     id: "",
     image_url: "",
-    shared_cost: "",
-    grand_total: "",
+    shared_cost: "0.00",
+    grand_total: "0.00",
     settled: false,
+    addl_gratuity: "0.00",
   });
   const [receiptItems, setReceiptItems] = useState<{ [key: string]: Item }>({});
   const [users, setUsers] = useState<{ [key: string]: User }>({});
@@ -79,10 +97,12 @@ export default function LiveReceiptPage({
   const [reminderName, setReminderName] = useState("");
   const [isSettledPopupVisible, setIsSettledPopupVisible] = useState(false);
   const [isSettled, setIsSettled] = useState(false);
+  const [isRemindAllPopupVisible, setIsRemindAllPopupVisible] = useState(false);
+  const [unclaimedItems, setUnclaimedItems] = useState(false);
 
   const router = useRouter();
-  const { lastMessage } = useWebSocket(
-    `wss://uh3gy3opd5.execute-api.us-east-1.amazonaws.com/prod?receiptId=${params.receiptid}`
+  const [wsUrl, setWsUrl] = useState<string>(
+    "wss://epccxqhta9.execute-api.us-east-1.amazonaws.com/prod"
   );
 
   const refreshSplits = async () => {
@@ -94,73 +114,48 @@ export default function LiveReceiptPage({
     setSplits(split_map);
   };
 
-  // useEffect(() => {
-  //   if (!socketRef.current) {
-  //     socketRef.current = new WebSocket(
-  //       `wss://uh3gy3opd5.execute-api.us-east-1.amazonaws.com/prod?receiptId=${params.receiptid}`
-  //     );
-
-  //     socketRef.current.onopen = () => {
-  //       alert("Connected");
-  //       console.log("Connected to WebSocket");
-  //     };
-
-  //     socketRef.current.onmessage = (event) => {
-  //       console.log(event.data);
-  //       refreshSplits();
-  //     };
-
-  //     socketRef.current.onerror = (error) => {
-  //       alert("eror");
-  //       console.log("WebSocket error:", error);
-  //     };
-
-  //     socketRef.current.onclose = () => {
-  //       alert("close");
-  //       console.log("WebSocket disconnected");
-  //     };
-  //   }
-
-  //   return () => {
-  //     if (
-  //       socketRef.current &&
-  //       socketRef.current.readyState === WebSocket.OPEN
-  //     ) {
-  //       socketRef.current.close();
-  //       console.log("WebSocket closed");
-  //     }
-  //   };
-  // }, []);
-
   const fetchData = async () => {
-    const receipt = await getReceipt(params.receiptid);
+    const [receipt, receipt_items, users] = await Promise.all([
+      getReceipt(params.receiptid),
+      getItems(params.receiptid),
+      getParticipants(params.receiptid),
+    ]);
+
     setReceipt(receipt);
     setIsSettled(receipt.settled);
-    const receipt_items = await getItems(params.receiptid);
-    const receipt_items_map: { [key: string]: Item } = {};
-    for (const item of receipt_items) {
-      receipt_items_map[item.id] = item;
-    }
+
+    const receipt_items_map = receipt_items.reduce((acc, item) => {
+      acc[item.id] = item;
+      return acc;
+    }, {} as { [key: string]: Item });
     setReceiptItems(receipt_items_map);
 
-    const user_map: { [key: string]: User } = {};
-    const users = await getParticipants(params.receiptid);
-    for (const user of users.hosts) {
-      user_map[user.id] = user;
-    }
-    for (const user of users.consumers) {
-      user_map[user.id] = user;
-    }
-    setUsers(user_map);
-    setSharedCharges(
-      parseFloat(receipt.shared_cost) / Object.keys(user_map).length
+    const user_map = [...users.hosts, ...users.consumers].reduce(
+      (acc, user) => {
+        acc[user.id] = user;
+        return acc;
+      },
+      {} as { [key: string]: User }
     );
-    await refreshSplits();
+    setUsers(user_map);
+
+    const userCount = Object.keys(user_map).length || 1;
+    setSharedCharges(
+      (parseFloat(receipt.shared_cost) + parseFloat(receipt.addl_gratuity)) /
+        userCount
+    );
+    refreshSplits();
   };
 
+  const { readyState, lastMessage } = useWebSocket(wsUrl, {
+    onOpen: () => console.log("Connection opened"),
+    shouldReconnect: () => true,
+  });
+
   useEffect(() => {
+    console.log("Message received, refreshing...");
     fetchData();
-  }, [lastMessage]);
+  }, [readyState, lastMessage]);
 
   useEffect(() => {
     setLoading(true);
@@ -178,21 +173,26 @@ export default function LiveReceiptPage({
         } else if (permission === Permission.UNAUTHORIZED) {
           router.push(`/unauthorized`);
         }
+        setWsUrl(
+          `wss://epccxqhta9.execute-api.us-east-1.amazonaws.com/prod?receiptId=${params.receiptid}&userId=${user?.id}`
+        );
       });
     }
 
     fetchData().then(() => setLoading(false));
   }, [status, params.receiptid, router]);
 
-  const shareBreakdown = async () => {
+  const shareReceipt = async (onboarding: boolean) => {
+    const url = onboarding
+      ? `https://splitmyreceipt.com/user?receiptid=${params.receiptid}&onboardConsumer=true`
+      : `https://splitmyreceipt.com/${params.receiptid}/live`;
     if (navigator.share) {
       try {
         await navigator.share({
           title: "FairShare",
           text: "Split your receipt with FairShare",
-          url: `https://splitmyreceipt.com/user?receiptid=${params.receiptid}&onboardConsumer=true`,
+          url: url,
         });
-        console.log("Content shared successfully");
       } catch (error) {
         console.error("Error sharing:", error);
       }
@@ -210,10 +210,40 @@ export default function LiveReceiptPage({
     setReminderName(name);
   };
 
+  const trySettleReceipt = () => {
+    const splits_on_items: { [key: string]: { [key: string]: boolean } } = {};
+    for (const split of Object.values(splits)) {
+      if (!(split.item_id in splits_on_items))
+        splits_on_items[split.item_id] = {};
+      splits_on_items[split.item_id][split.split_id] = true;
+    }
+    let is_complete = true;
+    for (const item_id of Object.keys(receiptItems)) {
+      if (
+        !(item_id in splits_on_items) ||
+        Object.keys(splits_on_items[item_id]).length !=
+          parseInt(receiptItems[item_id].quantity)
+      )
+        is_complete = false;
+    }
+    if (Object.keys(splits_on_items).length == 0 || !is_complete)
+      setUnclaimedItems(true);
+    else setIsSettledPopupVisible(true);
+  };
+
   const markSettled = async () => {
     setIsSettledPopupVisible(false);
     setIsSettled(true);
     await markAsSettled(params.receiptid);
+  };
+
+  const claimedItemTotal = () => {
+    let total = 0;
+    for (const split of Object.values(splits)) {
+      if (split.item_id in receiptItems)
+        total += parseFloat(receiptItems[split.item_id].price);
+    }
+    return total;
   };
 
   return (
@@ -221,13 +251,8 @@ export default function LiveReceiptPage({
       {isReminderPopupVisible && (
         <div className="fixed inset-0 flex items-center justify-center z-50">
           <div className="absolute inset-0 bg-[#1C2B35] opacity-20"></div>{" "}
-          {/* Blurred Background */}
           <div className="relative z-10 bg-white p-7 rounded-lg shadow-lg w-64 text-center">
             <p className="text-primary text-lg font-bold">Send Reminder</p>
-            {/* <p className="text-darkest text-base font-normal">
-            Do you want to send {reminderName} a reminder to send your
-            payment?
-          </p> */}
             <p className="text-darkest text-base font-normal">
               This will send an SMS reminder to {reminderName}, but this feature
               is not currently supported
@@ -280,8 +305,37 @@ export default function LiveReceiptPage({
           </div>
         </div>
       )}
+      {isRemindAllPopupVisible && (
+        <div className="fixed inset-0 flex items-center justify-center z-50">
+          <div className="absolute inset-0 bg-[#1C2B35] opacity-20"></div>{" "}
+          <div className="relative z-10 bg-white p-7 rounded-lg shadow-lg w-64 text-center">
+            <p className="text-primary text-lg font-bold">Send Reminder</p>
+            <p className="text-darkest text-base font-normal">
+              Would you like to send SMS reminders to all users to check their
+              splits?
+            </p>
+            <div className="mt-5 flex justify-center space-x-4">
+              <button
+                className="flex-1 px-4 py-2 bg-white text-midgray font-bold border rounded-full"
+                onClick={() => setIsRemindAllPopupVisible(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="flex-1 px-4 py-2 bg-primary text-white font-bold rounded-full"
+                onClick={() => setIsRemindAllPopupVisible(false)}
+              >
+                Yes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <Container>
         <LogoutSection></LogoutSection>
+        {unclaimedItems ? (
+          <UnclaimedItemsBanner setRemindAll={setIsRemindAllPopupVisible} />
+        ) : null}
         <div className="flex items-center">
           <Text type="xl_heading" className="text-darkest">
             Live Receipt
@@ -295,7 +349,7 @@ export default function LiveReceiptPage({
               />
               <HostActionButton
                 icon="fa-arrow-up-from-bracket"
-                onClick={shareBreakdown}
+                onClick={() => shareReceipt(true)}
                 className="ms-3"
               />
             </div>
@@ -308,7 +362,7 @@ export default function LiveReceiptPage({
         </Text>
         {isHost ? (
           <div className="w-full">
-            <Spacer size="small" />
+            <Spacer size="medium" />
             <SegmentedToggle
               tab1label="Receipt"
               tab1icon="fa-receipt"
@@ -327,7 +381,7 @@ export default function LiveReceiptPage({
                 items={receiptItems}
                 splits={splits}
                 user_id={user?.id || ""}
-                sharedCharges={sharedCharges.toFixed(2)}
+                sharedCharges={isSettled ? sharedCharges.toFixed(2) : null}
               ></PaymentBreakdown>
               <Spacer size="medium" />
               <DynamicSelection
@@ -337,22 +391,33 @@ export default function LiveReceiptPage({
                 splits={splits}
                 setSplits={setSplits}
                 disabled={isSettled}
+                unclaimedItems={unclaimedItems}
+                setUnclaimedItems={setUnclaimedItems}
               ></DynamicSelection>
               <LineItem
                 label="Subtotal"
                 price={
                   parseFloat(receipt.grand_total) -
-                  parseFloat(receipt.shared_cost)
+                  parseFloat(receipt.shared_cost) -
+                  parseFloat(receipt.addl_gratuity)
                 }
                 labelColor="text-midgray"
                 bold
               ></LineItem>
               <LineItem
-                label="Shared Charges"
+                label="Tax + Other Fees"
                 price={parseFloat(receipt.shared_cost)}
                 labelColor="text-midgray"
                 bold
               ></LineItem>
+              {parseFloat(receipt.addl_gratuity) != 0 ? (
+                <LineItem
+                  label="Tip"
+                  price={parseFloat(receipt.addl_gratuity)}
+                  labelColor="text-midgray"
+                  bold
+                ></LineItem>
+              ) : null}
               <LineItem
                 label="Grand Total"
                 price={parseFloat(receipt.grand_total)}
@@ -362,15 +427,13 @@ export default function LiveReceiptPage({
               {isHost && !isSettled ? (
                 <StickyButton
                   label="Mark as Settled"
-                  onClick={() => {
-                    setIsSettledPopupVisible(true);
-                  }}
+                  onClick={trySettleReceipt}
                   sticky
                 />
               ) : isHost ? (
                 <StickyButton
                   label="Share Payment Breakdown"
-                  onClick={shareBreakdown}
+                  onClick={() => shareReceipt(false)}
                   sticky
                 />
               ) : null}
@@ -384,29 +447,23 @@ export default function LiveReceiptPage({
                   splits={splits}
                   user_id={item?.id || ""}
                   user_name={item?.name || ""}
-                  sharedCharges={sharedCharges.toFixed(2)}
+                  sharedCharges={isSettled ? sharedCharges.toFixed(2) : null}
                   isHost={item?.id == user?.id}
                   handleReminder={handleReminder}
                 />
               ))}
               <LineItem
-                label="Subtotal"
+                label="Shared Charges"
                 price={
-                  parseFloat(receipt.grand_total) -
-                  parseFloat(receipt.shared_cost)
+                  parseFloat(receipt.shared_cost) +
+                  parseFloat(receipt.addl_gratuity)
                 }
                 labelColor="text-midgray"
                 bold
               ></LineItem>
               <LineItem
-                label="Shared Charges"
-                price={parseFloat(receipt.shared_cost)}
-                labelColor="text-midgray"
-                bold
-              ></LineItem>
-              <LineItem
-                label="Grand Total"
-                price={parseFloat(receipt.grand_total)}
+                label="Current Total"
+                price={claimedItemTotal() + parseFloat(receipt.shared_cost)}
                 labelColor="text-primary"
                 bold
               ></LineItem>
