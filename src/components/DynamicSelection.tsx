@@ -14,10 +14,26 @@ interface DynamicSelectionProps {
   items: { [key: string]: Item };
   users: { [key: string]: User };
   splits: { [key: string]: Split };
-  setSplits: React.Dispatch<React.SetStateAction<{ [key: string]: Split }>>;
+  pendingAdds: { [key: string]: Split };
+  setPendingAdditions: React.Dispatch<
+    React.SetStateAction<{ [key: string]: Split }>
+  >;
+  pendingDeletes: { [key: string]: boolean };
+  setPendingDeletions: React.Dispatch<
+    React.SetStateAction<{ [key: string]: boolean }>
+  >;
   disabled: boolean;
   unclaimedItems: boolean;
   setUnclaimedItems: React.Dispatch<React.SetStateAction<boolean>>;
+  setVisibleSplits: React.Dispatch<React.SetStateAction<Split[]>>;
+  realToTemp: {
+    [key: string]: string;
+  };
+  setRealToTemp: React.Dispatch<
+    React.SetStateAction<{
+      [key: string]: string;
+    }>
+  >;
 }
 
 const DynamicSelection: React.FC<DynamicSelectionProps> = ({
@@ -25,10 +41,16 @@ const DynamicSelection: React.FC<DynamicSelectionProps> = ({
   items,
   users,
   splits,
-  setSplits,
+  pendingAdds,
+  setPendingAdditions,
+  pendingDeletes,
+  setPendingDeletions,
   disabled,
   unclaimedItems,
   setUnclaimedItems,
+  setVisibleSplits,
+  realToTemp,
+  setRealToTemp,
 }) => {
   const { user } = useGlobalContext();
   const [groupedSplits, setGroupedSplits] = useState<{
@@ -37,7 +59,23 @@ const DynamicSelection: React.FC<DynamicSelectionProps> = ({
 
   useEffect(() => {
     const grouped: { [key: string]: Split[] } = {};
-    Object.values(splits).forEach((split) => {
+    const allSplits = [
+      ...Object.values(splits).filter(
+        ({ id }) =>
+          !pendingDeletes[id] ||
+          (id in realToTemp && !pendingDeletes[realToTemp[id]])
+      ),
+      ...Object.values(pendingAdds).filter(({ id }) => !pendingDeletes[id]),
+    ];
+    setVisibleSplits(allSplits);
+
+    // for (const real_id in realToTemp) {
+    //   if (realToTemp[real_id] in pendingDeletes) {
+    //     deleteSplit(receipt_id, real_id);
+    //   }
+    // }
+
+    allSplits.forEach((split) => {
       const { item_id, split_id } = split;
       const groupKey = `${item_id}_${split_id}`;
       if (!grouped[groupKey]) {
@@ -47,32 +85,53 @@ const DynamicSelection: React.FC<DynamicSelectionProps> = ({
     });
 
     setGroupedSplits(grouped);
-  }, [splits]);
+  }, [splits, pendingAdds, pendingDeletes]);
 
   const handleBubbleClick = async (itemId: string, splitId: string | null) => {
     if (!user?.id) return;
-    if (splitId && splitId.startsWith("temp")) return;
     setUnclaimedItems(false);
     const user_id = user.id;
-    const existingSplitKey = `${itemId}_${splitId}_${user_id}`;
+    const key = `${itemId}_${splitId}_${user_id}`;
     const tempSplitId = `temp${Date.now()}`;
-
-    try {
-      setSplits((prevSplits) => {
-        const updatedSplits = { ...prevSplits };
-
-        if (splitId && updatedSplits[existingSplitKey]) {
-          delete updatedSplits[existingSplitKey];
-        } else if (splitId) {
-          updatedSplits[existingSplitKey] = {
-            id: existingSplitKey,
+    console.log(`key: ${key}`);
+    if (splitId?.startsWith("temp")) {
+      // If you click and immediately unclick (split has temporary ID, hasn;t had time to get the real one yet)
+      console.log("temporary logic");
+      setPendingDeletions((prev) => {
+        const updated = { ...prev };
+        updated[key] = true;
+        return updated;
+      });
+      return;
+    }
+    // Frontend state update
+    if (key in splits) {
+      setPendingDeletions((prev) => {
+        const updated = { ...prev };
+        updated[key] = true;
+        return updated;
+      });
+      await deleteSplit(receipt_id, key);
+    } else {
+      setPendingDeletions((prev) => {
+        const updated = { ...prev };
+        if (splitId && key in updated) {
+          delete updated[key];
+        }
+        return updated;
+      });
+      setPendingAdditions((prev) => {
+        const updated = { ...prev };
+        if (splitId != null) {
+          updated[key] = {
+            id: splitId,
             receipt_id,
             user_id,
             item_id: itemId,
             split_id: splitId,
           };
         } else {
-          updatedSplits[`${itemId}_${tempSplitId}_${user_id}`] = {
+          updated[`${itemId}_${tempSplitId}_${user_id}`] = {
             id: `${itemId}_${tempSplitId}_${user_id}`,
             receipt_id,
             user_id,
@@ -80,42 +139,23 @@ const DynamicSelection: React.FC<DynamicSelectionProps> = ({
             split_id: tempSplitId,
           };
         }
-
-        return updatedSplits;
+        return updated;
       });
 
       if (splitId) {
-        if (splits[existingSplitKey]) {
-          await deleteSplit(receipt_id, existingSplitKey);
-        } else {
-          await createSplit(receipt_id, itemId, splitId);
-        }
-        return;
-      }
-
-      if (!splitId) {
-        const newId = await getNewSplitID(receipt_id, itemId);
+        await createSplit(receipt_id, itemId, splitId);
+      } else {
+        const newId = (await getNewSplitID(receipt_id, itemId)).toString();
         const realKey = `${itemId}_${newId}_${user_id}`;
 
-        setSplits((prevSplits) => {
-          const updatedSplits = { ...prevSplits };
-
-          if (updatedSplits[tempSplitId]) {
-            updatedSplits[realKey] = {
-              ...updatedSplits[tempSplitId],
-              id: realKey,
-              split_id: newId.toString(),
-            };
-            delete updatedSplits[tempSplitId];
-          }
-
-          return updatedSplits;
+        setRealToTemp((prev) => {
+          const updated = { ...prev };
+          updated[realKey] = `${itemId}_${tempSplitId}_${user_id}`;
+          return updated;
         });
-
-        await createSplit(receipt_id, itemId, newId.toString());
+        await createSplit(receipt_id, itemId, newId);
+        console.log(`Scheduled deletion of ${tempSplitId} --> ${realKey}`);
       }
-    } catch (error) {
-      console.error("Error updating split:", error);
     }
   };
 

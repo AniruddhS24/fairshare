@@ -47,6 +47,7 @@ export interface Receipt {
   grand_total: string;
   addl_gratuity: string;
   settled: boolean;
+  item_counter: number;
 }
 
 export async function createEmptyReceipt(): Promise<Receipt> {

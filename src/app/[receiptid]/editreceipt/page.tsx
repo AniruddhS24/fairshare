@@ -109,7 +109,7 @@ export default function EditReceiptPage({
       setSharedCharges({ value: receipt.shared_cost, edited: false });
       setAdditionalGratuity({ value: receipt.addl_gratuity, edited: false });
       const newPct = (
-        (parseFloat(receipt.addl_gratuity) / total) *
+        (parseFloat(receipt.addl_gratuity) / (total == 0 ? 1 : total)) *
         100
       ).toFixed(0);
       setAdditionalGratuityPct({
@@ -158,6 +158,7 @@ export default function EditReceiptPage({
     });
     setCounter(counter + 1);
     setReceiptItems(newReceiptItems);
+    console.log(newReceiptItems);
   };
 
   const calculateTotal = (subtotal: boolean) => {
@@ -181,11 +182,13 @@ export default function EditReceiptPage({
         receipt_changed = true;
         promises.push(deleteItem(receipt_id, item.id));
       } else if (item.id && item.edited) {
+        console.log(`Updating item: ${item.name}`);
         receipt_changed = true;
         promises.push(
           updateItem(receipt_id, item.id, item.name, item.quantity, item.price)
         );
       } else if (!item.id && !item.deleted) {
+        console.log(`Creating item: ${item.name}`);
         receipt_changed = true;
         promises.push(
           createItem(receipt_id, item.name, item.quantity, item.price)
@@ -201,7 +204,14 @@ export default function EditReceiptPage({
         })
       );
     }
-    await Promise.all(promises);
+    for (const promise of promises) {
+      try {
+        const resp = await promise;
+        console.log(resp);
+      } catch (error) {
+        console.error("Error processing item:", error);
+      }
+    }
     router.push(`/${receipt_id}/live`);
   };
 

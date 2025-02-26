@@ -5,7 +5,7 @@ import { Bell } from "lucide-react";
 
 interface ConsumerBreakdownProps {
   items: { [key: string]: Item };
-  splits: { [key: string]: Split };
+  splits: Split[];
   user_id: string;
   user_name: string;
   sharedCharges: string | null;
@@ -34,7 +34,7 @@ const ConsumerBreakdown: React.FC<ConsumerBreakdownProps> = ({
     const split_counts: { [key: string]: number } = {};
     const my_items: { [key: string]: MyItem } = {};
 
-    for (const split of Object.values(splits)) {
+    for (const split of splits) {
       const split_key = `${split.item_id}_${split.split_id}`;
       if (split_key in split_counts) {
         split_counts[split_key] += 1;
@@ -42,7 +42,7 @@ const ConsumerBreakdown: React.FC<ConsumerBreakdownProps> = ({
         split_counts[split_key] = 1;
       }
     }
-    for (const split of Object.values(splits)) {
+    for (const split of splits) {
       if (!(split.item_id in items)) continue;
       const split_key = `${split.item_id}_${split.split_id}`;
       if (split.user_id == user_id) {

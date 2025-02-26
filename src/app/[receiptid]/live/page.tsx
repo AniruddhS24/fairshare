@@ -30,11 +30,14 @@ import {
   getSplits,
   getReceipt,
   markAsSettled,
+  backend,
+  deleteSplit,
 } from "@/lib/backend";
 
 interface HostActionButtonProps {
   icon: string;
   onClick: () => void;
+  disabled: boolean;
   className?: string;
 }
 
@@ -42,11 +45,13 @@ const HostActionButton: React.FC<HostActionButtonProps> = ({
   icon,
   onClick,
   className,
+  disabled = false,
 }) => {
   return (
     <button
       onClick={() => onClick()}
       className={`border p-2 rounded-full text-primary w-10 h-10 ${className} `}
+      disabled={disabled}
     >
       <i className={`fas ${icon}`}></i>
     </button>
@@ -84,11 +89,24 @@ export default function LiveReceiptPage({
     grand_total: "0.00",
     settled: false,
     addl_gratuity: "0.00",
+    item_counter: 0,
   });
   const [receiptItems, setReceiptItems] = useState<{ [key: string]: Item }>({});
   const [users, setUsers] = useState<{ [key: string]: User }>({});
   const [splits, setSplits] = useState<{ [key: string]: Split }>({});
   const [sharedCharges, setSharedCharges] = useState<number>(0.0);
+
+  const [pendingAdditions, setPendingAdditions] = useState<{
+    [key: string]: Split;
+  }>({});
+  const [pendingDeletions, setPendingDeletions] = useState<{
+    [key: string]: boolean;
+  }>({});
+  const [realToTemp, setRealToTemp] = useState<{
+    [key: string]: string;
+  }>({});
+  const [visibleSplits, setVisibleSplits] = useState<Split[]>([]);
+
   const [isHost, setIsHost] = useState(false);
   const [selectedTab, setSelectedTab] = useState(0);
   // const [messages, setMessages] = useState<string[]>([]);
@@ -111,6 +129,38 @@ export default function LiveReceiptPage({
     for (const split of splits) {
       split_map[split.id] = split;
     }
+
+    const tempToReal: { [key: string]: string } = {};
+    for (const key in realToTemp) tempToReal[realToTemp[key]] = key;
+
+    for (const real_id in realToTemp) {
+      if (realToTemp[real_id] in pendingDeletions && real_id in split_map) {
+        delete split_map[real_id];
+        deleteSplit(params.receiptid, real_id);
+      }
+    }
+
+    setPendingAdditions((prev) => {
+      const updated = { ...prev };
+      for (const new_split_id of Object.keys(updated)) {
+        // No longer a pending addition
+        if (new_split_id in split_map || tempToReal[new_split_id] in split_map)
+          delete updated[new_split_id];
+      }
+      return updated;
+    });
+    // setPendingDeletions((prev) => {
+    //   const updated = { ...prev };
+    //   for (const deleted_split_id of Object.keys(updated)) {
+    //     // No longer a pending deletion
+    //     if (
+    //       !(deleted_split_id in split_map) &&
+    //       !deleted_split_id.contains("temp")
+    //     )
+    //       delete updated[deleted_split_id];
+    //   }
+    //   return updated;
+    // });
     setSplits(split_map);
   };
 
@@ -147,15 +197,16 @@ export default function LiveReceiptPage({
     refreshSplits();
   };
 
-  const { readyState, lastMessage } = useWebSocket(wsUrl, {
+  const { lastMessage } = useWebSocket(wsUrl, {
     onOpen: () => console.log("Connection opened"),
     shouldReconnect: () => true,
   });
 
   useEffect(() => {
+    // alert(lastMessage);
     console.log("Message received, refreshing...");
     fetchData();
-  }, [readyState, lastMessage]);
+  }, [lastMessage]);
 
   useEffect(() => {
     setLoading(true);
@@ -211,6 +262,10 @@ export default function LiveReceiptPage({
   };
 
   const trySettleReceipt = () => {
+    // console.log(pendingAdditions);
+    // console.log(pendingDeletions);
+    // console.log(splits);
+    // return;
     const splits_on_items: { [key: string]: { [key: string]: boolean } } = {};
     for (const split of Object.values(splits)) {
       if (!(split.item_id in splits_on_items))
@@ -235,6 +290,7 @@ export default function LiveReceiptPage({
     setIsSettledPopupVisible(false);
     setIsSettled(true);
     await markAsSettled(params.receiptid);
+    await backend("GET", `/receipt/${params.receiptid}/refresh`);
   };
 
   const claimedItemTotal = () => {
@@ -346,11 +402,13 @@ export default function LiveReceiptPage({
                 icon="fa-pen"
                 onClick={editReceipt}
                 className="ms-3"
+                disabled={isSettled}
               />
               <HostActionButton
                 icon="fa-arrow-up-from-bracket"
                 onClick={() => shareReceipt(true)}
                 className="ms-3"
+                disabled={isSettled}
               />
             </div>
           ) : null}
@@ -379,7 +437,7 @@ export default function LiveReceiptPage({
             <div className="w-full">
               <PaymentBreakdown
                 items={receiptItems}
-                splits={splits}
+                splits={visibleSplits}
                 user_id={user?.id || ""}
                 sharedCharges={isSettled ? sharedCharges.toFixed(2) : null}
               ></PaymentBreakdown>
@@ -389,10 +447,16 @@ export default function LiveReceiptPage({
                 items={receiptItems}
                 users={users}
                 splits={splits}
-                setSplits={setSplits}
+                pendingAdds={pendingAdditions}
+                setPendingAdditions={setPendingAdditions}
+                pendingDeletes={pendingDeletions}
+                setPendingDeletions={setPendingDeletions}
                 disabled={isSettled}
                 unclaimedItems={unclaimedItems}
                 setUnclaimedItems={setUnclaimedItems}
+                setVisibleSplits={setVisibleSplits}
+                realToTemp={realToTemp}
+                setRealToTemp={setRealToTemp}
               ></DynamicSelection>
               <LineItem
                 label="Subtotal"
@@ -444,7 +508,7 @@ export default function LiveReceiptPage({
                 <ConsumerBreakdown
                   key={index}
                   items={receiptItems}
-                  splits={splits}
+                  splits={visibleSplits}
                   user_id={item?.id || ""}
                   user_name={item?.name || ""}
                   sharedCharges={isSettled ? sharedCharges.toFixed(2) : null}

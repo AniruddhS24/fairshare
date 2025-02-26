@@ -55,6 +55,7 @@ export const GlobalProvider = ({ children }: { children: ReactNode }) => {
   const readJWT = () => {
     const jwt = localStorage.getItem("jwt");
     if (jwt) {
+      // console.log(jwt);
       getUserFromJWT()
         .then((data) => {
           setUser({
