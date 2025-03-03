@@ -34,10 +34,16 @@ const DynamicSelection: React.FC<DynamicSelectionProps> = ({
 }) => {
   const { user } = useGlobalContext();
 
+  function generateHexUUID16() {
+    const now = Date.now().toString(16); // Timestamp in hex
+    const randomPart = Math.random().toString(16).slice(2, 10); // 8 random hex digits
+    return (now + randomPart).slice(-16).toUpperCase(); // Ensure exactly 16 characters
+  }
+
   const handleAddSplit = async (itemId: string) => {
     if (!user?.id) return;
     const user_id = user.id;
-    const tempSplitId = `temp${Date.now()}`;
+    const tempSplitId = `temp${generateHexUUID16()}`;
     const key = `${itemId}_${tempSplitId}_${user_id}`;
 
     setPendingAdditions((prev) => ({
@@ -100,13 +106,14 @@ const DynamicSelection: React.FC<DynamicSelectionProps> = ({
     <div className="flex flex-col w-full">
       {Object.values(items).map((item) => {
         const allSplits = [
-          ...Object.values(splits),
-          ...Object.values(pendingAdds),
+          ...Object.entries(splits),
+          ...Object.entries(pendingAdds),
         ]
           .filter(
-            (split) => split.item_id === item.id && !pendingDeletions[split.id]
+            ([, split]) =>
+              split.item_id === item.id && !pendingDeletions[split.id]
           )
-          .reduce((acc, split) => {
+          .reduce((acc, [, split]) => {
             acc[split.split_id] = acc[split.split_id] || {
               consumers: [],
               mine: false,

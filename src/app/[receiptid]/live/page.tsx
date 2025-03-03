@@ -274,9 +274,9 @@ export default function LiveReceiptPage({
         all_success = false;
       }
     }
+    refreshSplits();
     setPendingAdditions({});
     setPendingDeletions({});
-    refreshSplits();
     if (all_success) {
       setBanner({
         label: "Successfully saved changes!",
