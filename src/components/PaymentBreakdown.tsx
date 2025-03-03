@@ -9,6 +9,8 @@ interface PaymentBreakdownProps {
   splits: Split[];
   user_id: string;
   sharedCharges: string | null;
+  total: number;
+  setTotal: React.Dispatch<React.SetStateAction<number>>;
 }
 
 interface MyItem {
@@ -20,9 +22,10 @@ const PaymentBreakdown: React.FC<PaymentBreakdownProps> = ({
   splits,
   user_id,
   sharedCharges,
+  total,
+  setTotal,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [total, setTotal] = useState<number>(0.0);
   const [myItems, setMyItems] = useState<{ [key: string]: MyItem }>({});
 
   useEffect(() => {

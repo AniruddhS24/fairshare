@@ -14,7 +14,7 @@ import ConsumerBreakdown from "@/components/ConsumerBreakdown";
 import LineItem from "@/components/LineItem";
 import StickyButton from "@/components/StickyButton";
 import useWebSocket from "react-use-websocket";
-
+import { Banner, BannerProps } from "@/components/Banner";
 import {
   useGlobalContext,
   AuthStatus,
@@ -31,6 +31,7 @@ import {
   getReceipt,
   markAsSettled,
   backend,
+  createSplit,
   deleteSplit,
 } from "@/lib/backend";
 
@@ -55,23 +56,6 @@ const HostActionButton: React.FC<HostActionButtonProps> = ({
     >
       <i className={`fas ${icon}`}></i>
     </button>
-  );
-};
-
-const UnclaimedItemsBanner: React.FC<{
-  setRemindAll: React.Dispatch<React.SetStateAction<boolean>>;
-}> = ({ setRemindAll }) => {
-  return (
-    <div className="w-full flex justify-center items-center bg-red-200 text-red-700 rounded-md p-2 mb-4">
-      <i className={"fas fa-circle-exclamation mr-1 text-red-700"}></i>
-      There are still unclaimed items.{" "}
-      <button
-        className="font-bold text-primary focus:outline-none ms-1"
-        onClick={() => setRemindAll(true)}
-      >
-        Remind all?
-      </button>
-    </div>
   );
 };
 
@@ -102,10 +86,6 @@ export default function LiveReceiptPage({
   const [pendingDeletions, setPendingDeletions] = useState<{
     [key: string]: boolean;
   }>({});
-  const [realToTemp, setRealToTemp] = useState<{
-    [key: string]: string;
-  }>({});
-  const [visibleSplits, setVisibleSplits] = useState<Split[]>([]);
 
   const [isHost, setIsHost] = useState(false);
   const [selectedTab, setSelectedTab] = useState(0);
@@ -118,6 +98,10 @@ export default function LiveReceiptPage({
   const [isRemindAllPopupVisible, setIsRemindAllPopupVisible] = useState(false);
   const [unclaimedItems, setUnclaimedItems] = useState(false);
 
+  const [myTotal, setMyTotal] = useState<number>(0.0);
+
+  const [banner, setBanner] = useState<BannerProps | null>(null);
+
   const router = useRouter();
   const [wsUrl, setWsUrl] = useState<string>(
     "wss://epccxqhta9.execute-api.us-east-1.amazonaws.com/prod"
@@ -129,45 +113,14 @@ export default function LiveReceiptPage({
     for (const split of splits) {
       split_map[split.id] = split;
     }
-
-    const tempToReal: { [key: string]: string } = {};
-    for (const key in realToTemp) tempToReal[realToTemp[key]] = key;
-
-    for (const real_id in realToTemp) {
-      if (realToTemp[real_id] in pendingDeletions && real_id in split_map) {
-        delete split_map[real_id];
-        deleteSplit(params.receiptid, real_id);
-      }
-    }
-
-    setPendingAdditions((prev) => {
-      const updated = { ...prev };
-      for (const new_split_id of Object.keys(updated)) {
-        // No longer a pending addition
-        if (new_split_id in split_map || tempToReal[new_split_id] in split_map)
-          delete updated[new_split_id];
-      }
-      return updated;
-    });
-    // setPendingDeletions((prev) => {
-    //   const updated = { ...prev };
-    //   for (const deleted_split_id of Object.keys(updated)) {
-    //     // No longer a pending deletion
-    //     if (
-    //       !(deleted_split_id in split_map) &&
-    //       !deleted_split_id.contains("temp")
-    //     )
-    //       delete updated[deleted_split_id];
-    //   }
-    //   return updated;
-    // });
     setSplits(split_map);
   };
 
   const fetchData = async () => {
-    const [receipt, receipt_items, users] = await Promise.all([
+    const [receipt, receipt_items, receipt_splits, users] = await Promise.all([
       getReceipt(params.receiptid),
       getItems(params.receiptid),
+      getSplits(params.receiptid),
       getParticipants(params.receiptid),
     ]);
 
@@ -189,15 +142,41 @@ export default function LiveReceiptPage({
     );
     setUsers(user_map);
 
+    const split_map = receipt_splits.reduce((acc, item) => {
+      acc[item.id] = item;
+      return acc;
+    }, {} as { [key: string]: Split });
+    setSplits(split_map);
+
     const userCount = Object.keys(user_map).length || 1;
     setSharedCharges(
       (parseFloat(receipt.shared_cost) + parseFloat(receipt.addl_gratuity)) /
         userCount
     );
-    refreshSplits();
+
+    const splits_on_items: { [key: string]: { [key: string]: boolean } } = {};
+    for (const split of Object.values(split_map)) {
+      if (!(split.item_id in splits_on_items))
+        splits_on_items[split.item_id] = {};
+      splits_on_items[split.item_id][split.split_id] = true;
+    }
+    let is_complete = true;
+    for (const item_id of Object.keys(receipt_items_map)) {
+      if (
+        !(item_id in splits_on_items) ||
+        Object.keys(splits_on_items[item_id]).length !=
+          parseInt(receipt_items_map[item_id].quantity)
+      )
+        is_complete = false;
+    }
+    if (Object.keys(splits_on_items).length == 0 || !is_complete)
+      setUnclaimedItems(true);
+    else {
+      setUnclaimedItems(false);
+    }
   };
 
-  const { lastMessage } = useWebSocket(wsUrl, {
+  const { readyState, lastMessage } = useWebSocket(wsUrl, {
     onOpen: () => console.log("Connection opened"),
     shouldReconnect: () => true,
   });
@@ -206,7 +185,12 @@ export default function LiveReceiptPage({
     // alert(lastMessage);
     console.log("Message received, refreshing...");
     fetchData();
-  }, [lastMessage]);
+  }, [lastMessage, readyState]);
+
+  const mergedSplits = [
+    ...Object.values(splits),
+    ...Object.values(pendingAdditions),
+  ].filter((split) => !pendingDeletions[split.id]);
 
   useEffect(() => {
     setLoading(true);
@@ -261,29 +245,51 @@ export default function LiveReceiptPage({
     setReminderName(name);
   };
 
-  const trySettleReceipt = () => {
-    // console.log(pendingAdditions);
-    // console.log(pendingDeletions);
-    // console.log(splits);
-    // return;
-    const splits_on_items: { [key: string]: { [key: string]: boolean } } = {};
-    for (const split of Object.values(splits)) {
-      if (!(split.item_id in splits_on_items))
-        splits_on_items[split.item_id] = {};
-      splits_on_items[split.item_id][split.split_id] = true;
+  const saveEdits = async () => {
+    const promises = [];
+    let all_success = true;
+    for (const key in pendingDeletions) {
+      promises.push(deleteSplit(params.receiptid, key));
     }
-    let is_complete = true;
-    for (const item_id of Object.keys(receiptItems)) {
-      if (
-        !(item_id in splits_on_items) ||
-        Object.keys(splits_on_items[item_id]).length !=
-          parseInt(receiptItems[item_id].quantity)
-      )
-        is_complete = false;
+    for (const promise of promises) {
+      try {
+        await promise;
+      } catch {
+        all_success = false;
+      }
     }
-    if (Object.keys(splits_on_items).length == 0 || !is_complete)
-      setUnclaimedItems(true);
-    else setIsSettledPopupVisible(true);
+    for (const key in pendingAdditions) {
+      promises.push(
+        createSplit(
+          params.receiptid,
+          pendingAdditions[key].item_id,
+          pendingAdditions[key].split_id
+        )
+      );
+    }
+    for (const promise of promises) {
+      try {
+        await promise;
+      } catch {
+        all_success = false;
+      }
+    }
+    setPendingAdditions({});
+    setPendingDeletions({});
+    refreshSplits();
+    if (all_success) {
+      setBanner({
+        label: "Successfully saved changes!",
+        icon: "fa-check",
+        type: "success",
+      });
+    } else {
+      setBanner({
+        label: "Could not add some splits, please check!",
+        icon: "fa-xmark",
+        type: "error",
+      });
+    }
   };
 
   const markSettled = async () => {
@@ -300,6 +306,16 @@ export default function LiveReceiptPage({
         total += parseFloat(receiptItems[split.item_id].price);
     }
     return total;
+  };
+
+  const sendToVenmo = () => {
+    // Go to Venmo and fill price to pay with
+    const amount = myTotal;
+    const note = "FairShare restaurant split";
+    const venmoURI = `venmo://paycharge?txn=pay&amount=${amount}&audience=private&note=${note}`;
+
+    // Open the Venmo app (if installed) or the web page
+    window.location.href = venmoURI;
   };
 
   return (
@@ -389,14 +405,21 @@ export default function LiveReceiptPage({
       )}
       <Container>
         <LogoutSection></LogoutSection>
-        {unclaimedItems ? (
-          <UnclaimedItemsBanner setRemindAll={setIsRemindAllPopupVisible} />
+        {isHost && !unclaimedItems && !isSettled ? (
+          <Banner
+            label="Settle receipt to finalize payments!"
+            icon="fa-check"
+            type="success"
+          />
+        ) : null}
+        {banner ? (
+          <Banner label={banner.label} icon={banner.icon} type={banner.type} />
         ) : null}
         <div className="flex items-center">
           <Text type="xl_heading" className="text-darkest">
             Live Receipt
           </Text>
-          {isHost ? (
+          {isHost && !isSettled ? (
             <div>
               <HostActionButton
                 icon="fa-pen"
@@ -404,20 +427,27 @@ export default function LiveReceiptPage({
                 className="ms-3"
                 disabled={isSettled}
               />
-              <HostActionButton
+              {/* <HostActionButton
                 icon="fa-arrow-up-from-bracket"
                 onClick={() => shareReceipt(true)}
                 className="ms-3"
                 disabled={isSettled}
-              />
+              /> */}
             </div>
           ) : null}
         </div>
         <Spacer size="small" />
-        <Text type="body" className="text-midgray">
-          Tap the portions you consumed. Note your payment breakdown may not be
-          finalized until everyone has added their splits.
-        </Text>
+        {isHost ? (
+          <Text type="body" className="text-midgray">
+            Tap the portions you consumed and share receipt link with other
+            consumers.
+          </Text>
+        ) : (
+          <Text type="body" className="text-midgray">
+            Tap the portions you consumed. Tax, tip, and shared charges will be
+            added once everyone has added their splits.
+          </Text>
+        )}
         {isHost ? (
           <div className="w-full">
             <Spacer size="medium" />
@@ -437,9 +467,11 @@ export default function LiveReceiptPage({
             <div className="w-full">
               <PaymentBreakdown
                 items={receiptItems}
-                splits={visibleSplits}
+                splits={mergedSplits}
                 user_id={user?.id || ""}
                 sharedCharges={isSettled ? sharedCharges.toFixed(2) : null}
+                total={myTotal}
+                setTotal={setMyTotal}
               ></PaymentBreakdown>
               <Spacer size="medium" />
               <DynamicSelection
@@ -449,14 +481,12 @@ export default function LiveReceiptPage({
                 splits={splits}
                 pendingAdds={pendingAdditions}
                 setPendingAdditions={setPendingAdditions}
-                pendingDeletes={pendingDeletions}
+                pendingDeletions={pendingDeletions}
                 setPendingDeletions={setPendingDeletions}
                 disabled={isSettled}
-                unclaimedItems={unclaimedItems}
-                setUnclaimedItems={setUnclaimedItems}
-                setVisibleSplits={setVisibleSplits}
-                realToTemp={realToTemp}
-                setRealToTemp={setRealToTemp}
+                onSplitChange={() => {
+                  setBanner(null);
+                }}
               ></DynamicSelection>
               <LineItem
                 label="Subtotal"
@@ -488,16 +518,32 @@ export default function LiveReceiptPage({
                 labelColor="text-primary"
                 bold
               ></LineItem>
-              {isHost && !isSettled ? (
+              {Object.keys(pendingAdditions).length > 0 ||
+              Object.keys(pendingDeletions).length > 0 ? (
                 <StickyButton
-                  label="Mark as Settled"
-                  onClick={trySettleReceipt}
+                  label="Save changes"
+                  icon="fa-floppy-disk"
+                  onClick={saveEdits}
                   sticky
                 />
-              ) : isHost ? (
+              ) : isHost && !unclaimedItems && !isSettled ? (
+                <StickyButton
+                  label="Mark as Settled"
+                  onClick={() => setIsSettledPopupVisible(true)}
+                  sticky
+                />
+              ) : isHost && !isSettled ? (
                 <StickyButton
                   label="Share Payment Breakdown"
-                  onClick={() => shareReceipt(false)}
+                  icon="fa-arrow-up-from-bracket"
+                  onClick={() => shareReceipt(true)}
+                  sticky
+                />
+              ) : !isHost && isSettled ? (
+                <StickyButton
+                  label="Pay Host"
+                  icon="venmo"
+                  onClick={sendToVenmo}
                   sticky
                 />
               ) : null}
@@ -508,7 +554,7 @@ export default function LiveReceiptPage({
                 <ConsumerBreakdown
                   key={index}
                   items={receiptItems}
-                  splits={visibleSplits}
+                  splits={mergedSplits}
                   user_id={item?.id || ""}
                   user_name={item?.name || ""}
                   sharedCharges={isSettled ? sharedCharges.toFixed(2) : null}
@@ -527,7 +573,11 @@ export default function LiveReceiptPage({
               ></LineItem>
               <LineItem
                 label="Current Total"
-                price={claimedItemTotal() + parseFloat(receipt.shared_cost)}
+                price={
+                  claimedItemTotal() +
+                  parseFloat(receipt.shared_cost) +
+                  parseFloat(receipt.addl_gratuity)
+                }
                 labelColor="text-primary"
                 bold
               ></LineItem>

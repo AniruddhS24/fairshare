@@ -71,7 +71,6 @@ export const GlobalProvider = ({ children }: { children: ReactNode }) => {
           localStorage.removeItem("jwt");
         });
     } else {
-      console.log("No token found");
       setUser(null);
       setStatus(AuthStatus.NO_TOKEN);
     }

@@ -21,6 +21,7 @@ const config: Config = {
         midgray: "#5F758A",
         lightgray: "#C1C9D0",
         lightgraytransparent: "#C1C9D063",
+        error: "#D2383B",
       },
       fontFamily: {
         sans: ["Helvetica Neue", "sans-serif"],

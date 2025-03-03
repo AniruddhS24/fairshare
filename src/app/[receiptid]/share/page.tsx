@@ -52,7 +52,6 @@ export default function ShareReceiptPage({
           text: "Split your receipt with FairShare",
           url: `https://splitmyreceipt.com/user?receiptid=${receipt_id}&onboardConsumer=true`, // URL to share (should be link/user?receiptid=...&onboardConsumer=true&page=split)
         });
-        console.log("Content shared successfully");
       } catch (error) {
         console.error("Error sharing:", error);
       }

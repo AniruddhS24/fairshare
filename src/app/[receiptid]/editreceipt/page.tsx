@@ -158,7 +158,6 @@ export default function EditReceiptPage({
     });
     setCounter(counter + 1);
     setReceiptItems(newReceiptItems);
-    console.log(newReceiptItems);
   };
 
   const calculateTotal = (subtotal: boolean) => {
@@ -182,13 +181,11 @@ export default function EditReceiptPage({
         receipt_changed = true;
         promises.push(deleteItem(receipt_id, item.id));
       } else if (item.id && item.edited) {
-        console.log(`Updating item: ${item.name}`);
         receipt_changed = true;
         promises.push(
           updateItem(receipt_id, item.id, item.name, item.quantity, item.price)
         );
       } else if (!item.id && !item.deleted) {
-        console.log(`Creating item: ${item.name}`);
         receipt_changed = true;
         promises.push(
           createItem(receipt_id, item.name, item.quantity, item.price)
@@ -206,8 +203,7 @@ export default function EditReceiptPage({
     }
     for (const promise of promises) {
       try {
-        const resp = await promise;
-        console.log(resp);
+        await promise;
       } catch (error) {
         console.error("Error processing item:", error);
       }

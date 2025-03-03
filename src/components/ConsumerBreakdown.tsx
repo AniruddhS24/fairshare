@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import Text from "./Text";
 import { Item, Split } from "@/lib/backend";
-import { Bell } from "lucide-react";
 
 interface ConsumerBreakdownProps {
   items: { [key: string]: Item };
@@ -78,12 +77,10 @@ const ConsumerBreakdown: React.FC<ConsumerBreakdownProps> = ({
               Host
             </span>
           ) : (
-            <Bell
-              className="w-5 h-5 text-primary"
-              onClick={() => {
-                handleReminder(user_name);
-              }}
-            />
+            <i
+              className={`fas fa-regular fa-bell mr-2 text-primary`}
+              onClick={() => handleReminder(user_name)}
+            ></i>
           )}
         </div>
         <Text type="body_bold" className="text-midgray">

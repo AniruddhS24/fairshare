@@ -10,7 +10,7 @@ const Container: React.FC<ContainerProps> = ({ children, centered }) => {
     <div
       className={`h-full flex flex-col ${
         centered ? "items-center" : "items-start"
-      } justify-start bg-white px-4 pb-6`}
+      } justify-start bg-white px-4 pb-12`}
     >
       {children}
     </div>

@@ -1,14 +1,8 @@
-import React, { useState, useEffect } from "react";
-import {
-  Item,
-  User,
-  Split,
-  deleteSplit,
-  getNewSplitID,
-  createSplit,
-} from "@/lib/backend";
-import LineItem from "@/components/LineItem";
+import React from "react";
+import { Item, User, Split } from "@/lib/backend";
+import Text from "@/components/Text";
 import { useGlobalContext } from "@/contexts/GlobalContext";
+
 interface DynamicSelectionProps {
   receipt_id: string;
   items: { [key: string]: Item };
@@ -18,22 +12,12 @@ interface DynamicSelectionProps {
   setPendingAdditions: React.Dispatch<
     React.SetStateAction<{ [key: string]: Split }>
   >;
-  pendingDeletes: { [key: string]: boolean };
+  pendingDeletions: { [key: string]: boolean };
   setPendingDeletions: React.Dispatch<
     React.SetStateAction<{ [key: string]: boolean }>
   >;
   disabled: boolean;
-  unclaimedItems: boolean;
-  setUnclaimedItems: React.Dispatch<React.SetStateAction<boolean>>;
-  setVisibleSplits: React.Dispatch<React.SetStateAction<Split[]>>;
-  realToTemp: {
-    [key: string]: string;
-  };
-  setRealToTemp: React.Dispatch<
-    React.SetStateAction<{
-      [key: string]: string;
-    }>
-  >;
+  onSplitChange?: () => void;
 }
 
 const DynamicSelection: React.FC<DynamicSelectionProps> = ({
@@ -43,194 +27,160 @@ const DynamicSelection: React.FC<DynamicSelectionProps> = ({
   splits,
   pendingAdds,
   setPendingAdditions,
-  pendingDeletes,
+  pendingDeletions,
   setPendingDeletions,
   disabled,
-  unclaimedItems,
-  setUnclaimedItems,
-  setVisibleSplits,
-  realToTemp,
-  setRealToTemp,
+  onSplitChange,
 }) => {
   const { user } = useGlobalContext();
-  const [groupedSplits, setGroupedSplits] = useState<{
-    [key: string]: Split[];
-  }>({});
 
-  useEffect(() => {
-    const grouped: { [key: string]: Split[] } = {};
-    const allSplits = [
-      ...Object.values(splits).filter(
-        ({ id }) =>
-          !pendingDeletes[id] ||
-          (id in realToTemp && !pendingDeletes[realToTemp[id]])
-      ),
-      ...Object.values(pendingAdds).filter(({ id }) => !pendingDeletes[id]),
-    ];
-    setVisibleSplits(allSplits);
-
-    // for (const real_id in realToTemp) {
-    //   if (realToTemp[real_id] in pendingDeletes) {
-    //     deleteSplit(receipt_id, real_id);
-    //   }
-    // }
-
-    allSplits.forEach((split) => {
-      const { item_id, split_id } = split;
-      const groupKey = `${item_id}_${split_id}`;
-      if (!grouped[groupKey]) {
-        grouped[groupKey] = [];
-      }
-      grouped[groupKey].push(split);
-    });
-
-    setGroupedSplits(grouped);
-  }, [splits, pendingAdds, pendingDeletes]);
-
-  const handleBubbleClick = async (itemId: string, splitId: string | null) => {
+  const handleAddSplit = async (itemId: string) => {
     if (!user?.id) return;
-    setUnclaimedItems(false);
+    const user_id = user.id;
+    const tempSplitId = `temp${Date.now()}`;
+    const key = `${itemId}_${tempSplitId}_${user_id}`;
+
+    setPendingAdditions((prev) => ({
+      ...prev,
+      [key]: {
+        id: key,
+        receipt_id,
+        user_id,
+        item_id: itemId,
+        split_id: tempSplitId,
+      },
+    }));
+
+    onSplitChange?.();
+  };
+
+  const handleAdjustSplit = async (itemId: string, splitId: string) => {
+    if (!user?.id) return;
+    if (!itemId) return;
+    const currentSplits = splits;
     const user_id = user.id;
     const key = `${itemId}_${splitId}_${user_id}`;
-    const tempSplitId = `temp${Date.now()}`;
-    console.log(`key: ${key}`);
-    if (splitId?.startsWith("temp")) {
-      // If you click and immediately unclick (split has temporary ID, hasn;t had time to get the real one yet)
-      console.log("temporary logic");
-      setPendingDeletions((prev) => {
-        const updated = { ...prev };
-        updated[key] = true;
-        return updated;
-      });
-      return;
-    }
-    // Frontend state update
-    if (key in splits) {
-      setPendingDeletions((prev) => {
-        const updated = { ...prev };
-        updated[key] = true;
-        return updated;
-      });
-      await deleteSplit(receipt_id, key);
-    } else {
-      setPendingDeletions((prev) => {
-        const updated = { ...prev };
-        if (splitId && key in updated) {
-          delete updated[key];
-        }
-        return updated;
-      });
+
+    if (key in pendingAdds) {
       setPendingAdditions((prev) => {
         const updated = { ...prev };
-        if (splitId != null) {
-          updated[key] = {
-            id: splitId,
-            receipt_id,
-            user_id,
-            item_id: itemId,
-            split_id: splitId,
-          };
-        } else {
-          updated[`${itemId}_${tempSplitId}_${user_id}`] = {
-            id: `${itemId}_${tempSplitId}_${user_id}`,
-            receipt_id,
-            user_id,
-            item_id: itemId,
-            split_id: tempSplitId,
-          };
-        }
+        if (key in updated) delete updated[key];
         return updated;
       });
-
-      if (splitId) {
-        await createSplit(receipt_id, itemId, splitId);
-      } else {
-        const newId = (await getNewSplitID(receipt_id, itemId)).toString();
-        const realKey = `${itemId}_${newId}_${user_id}`;
-
-        setRealToTemp((prev) => {
-          const updated = { ...prev };
-          updated[realKey] = `${itemId}_${tempSplitId}_${user_id}`;
-          return updated;
-        });
-        await createSplit(receipt_id, itemId, newId);
-        console.log(`Scheduled deletion of ${tempSplitId} --> ${realKey}`);
-      }
+    } else if (key in pendingDeletions) {
+      setPendingDeletions((prev) => {
+        const updated = { ...prev };
+        if (key in updated) delete updated[key];
+        return updated;
+      });
+    } else if (key in currentSplits) {
+      setPendingDeletions((prev) => {
+        const updated = { ...prev };
+        updated[key] = true;
+        return updated;
+      });
+    } else {
+      setPendingAdditions((prev) => {
+        const updated = { ...prev };
+        updated[key] = {
+          id: key,
+          receipt_id,
+          user_id,
+          item_id: itemId,
+          split_id: splitId,
+        };
+        return updated;
+      });
     }
+
+    onSplitChange?.();
   };
 
   return (
-    <div className="flex justify-between items-center w-full flex-col">
-      {Object.values(items).map((item, index) => {
-        const existingSplitsForItem = Object.entries(groupedSplits)
-          .filter(([key]) => key.startsWith(item.id))
-          .sort(([keyA], [keyB]) => {
-            const splitIdA = parseInt(keyA.split("_")[1]);
-            const splitIdB = parseInt(keyB.split("_")[1]);
-            return splitIdA - splitIdB;
-          });
-
-        const numExistingSplits = existingSplitsForItem.length;
-        const numRemainingBubbles = parseInt(item.quantity) - numExistingSplits;
+    <div className="flex flex-col w-full">
+      {Object.values(items).map((item) => {
+        const allSplits = [
+          ...Object.values(splits),
+          ...Object.values(pendingAdds),
+        ]
+          .filter(
+            (split) => split.item_id === item.id && !pendingDeletions[split.id]
+          )
+          .reduce((acc, split) => {
+            acc[split.split_id] = acc[split.split_id] || {
+              consumers: [],
+              mine: false,
+            };
+            acc[split.split_id].consumers.push(
+              users[split.user_id]?.name || "Unknown"
+            );
+            acc[split.split_id].mine =
+              acc[split.split_id].mine || split.user_id == user?.id;
+            return acc;
+          }, {} as Record<string, { consumers: string[]; mine: boolean }>);
 
         return (
-          <div key={index} className="w-full mb-4">
-            <LineItem
-              label={item.quantity + " " + item.name}
+          <div key={item.id} className="w-full mb-4">
+            {/* <LineItem
+              label={`${item.quantity} ${item.name}`}
               price={parseFloat(item.price) * parseInt(item.quantity)}
               labelColor="text-darkest"
               bold
-            />
+            /> */}
+            <div className={`flex justify-between items-center w-full`}>
+              <div className="flex items-center">
+                <Text type="body_bold" className="text-darkest">
+                  {item.quantity} {item.name}
+                </Text>
+                {Object.keys(allSplits).length < parseInt(item.quantity) ? (
+                  <div className="flex ms-1 px-1 text-error font-bold items-center">
+                    <i
+                      className={`fas fa-circle mr-1`}
+                      style={{ fontSize: "8px" }}
+                    ></i>
+                    <Text type="body_bold">
+                      {parseInt(item.quantity) - Object.keys(allSplits).length}{" "}
+                      Unclaimed
+                    </Text>
+                  </div>
+                ) : (
+                  <div className="flex ms-1 px-1 text-primary font-bold items-center">
+                    <i
+                      className={`fas fa-circle mr-1`}
+                      style={{ fontSize: "8px" }}
+                    ></i>
+                    <Text type="body_bold">Claimed</Text>
+                  </div>
+                )}
+              </div>
+              <Text type="body" className="text-midgray">
+                ${(parseFloat(item.price) * parseInt(item.quantity)).toFixed(2)}
+              </Text>
+            </div>
             <div className="flex flex-wrap mt-2 gap-2">
-              {existingSplitsForItem.map(([key, splitGroup]) => {
-                const isFilled = splitGroup.length > 0;
-                const containsMe =
-                  isFilled &&
-                  splitGroup.some((split) => split.user_id === user?.id);
-                const userNames = isFilled
-                  ? splitGroup
-                      .map((split) => users[split.user_id]?.name || "Unknown")
-                      .sort((a, b) => a.localeCompare(b))
-                      .join(", ")
-                  : "";
-                return (
-                  <button
-                    key={key}
-                    className={`flex items-center justify-center ${
-                      isFilled
-                        ? `w-auto px-4 h-10 rounded-lg border ${
-                            containsMe
-                              ? "border-primary text-primary font-bold"
-                              : "border-lightgray text-midgray"
-                          }`
-                        : "w-10 h-10 rounded-full border border-lightgray bg-lightgraytransparent"
-                    }`}
-                    onClick={() =>
-                      handleBubbleClick(item.id, key.split("_")[1])
-                    }
-                    disabled={disabled}
-                  >
-                    {isFilled ? userNames : ""}
-                  </button>
-                );
-              })}
-              {Array.from({ length: numRemainingBubbles }, (_, i) => (
+              {!disabled &&
+              Object.keys(allSplits).length < parseInt(item.quantity) ? (
                 <button
-                  key={numExistingSplits + i}
-                  className={`w-10 h-10 rounded-full border-2 ${
-                    unclaimedItems ? "border-red-700" : "border-lightgray"
-                  } ${
-                    unclaimedItems
-                      ? i !== 0
-                        ? "border-dotted bg-red-200"
-                        : "bg-red-200"
-                      : i !== 0
-                      ? "border-dotted bg-lightgraytransparent"
-                      : "bg-white"
+                  className="w-10 h-10 rounded-full bg-primary flex items-center justify-center font-bold 
+             text-white transition-transform duration-150 active:scale-90"
+                  onClick={() => handleAddSplit(item.id)}
+                >
+                  <i className="fas fa-plus"></i>
+                </button>
+              ) : null}
+              {Object.entries(allSplits).map(([splitId, userNames]) => (
+                <button
+                  key={splitId}
+                  className={`w-auto px-4 h-10 rounded-lg border border-primary text-primary ${
+                    userNames.mine
+                      ? "font-bold bg-[#087a8733] border-2"
+                      : "font-normal"
                   }`}
-                  onClick={() => handleBubbleClick(item.id, null)}
-                  disabled={disabled || i !== 0}
-                />
+                  disabled={disabled}
+                  onClick={() => handleAdjustSplit(item.id, splitId)}
+                >
+                  {userNames.consumers.join(", ")}
+                </button>
               ))}
             </div>
           </div>

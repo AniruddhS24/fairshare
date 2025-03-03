@@ -190,8 +190,7 @@ function UserOnboardingPage() {
       } else {
         await login(userData);
       }
-    } catch (error) {
-      console.log(error);
+    } catch {
       setCode("");
     }
   };
