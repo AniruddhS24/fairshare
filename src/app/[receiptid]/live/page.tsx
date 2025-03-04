@@ -96,7 +96,7 @@ export default function LiveReceiptPage({
   const [isSettledPopupVisible, setIsSettledPopupVisible] = useState(false);
   const [isSettled, setIsSettled] = useState(false);
   const [isRemindAllPopupVisible, setIsRemindAllPopupVisible] = useState(false);
-  const [unclaimedItems, setUnclaimedItems] = useState(false);
+  const [unclaimedItems, setUnclaimedItems] = useState(true);
 
   const [myTotal, setMyTotal] = useState<number>(0.0);
 
@@ -528,13 +528,13 @@ export default function LiveReceiptPage({
                 />
               ) : isHost && !unclaimedItems && !isSettled ? (
                 <StickyButton
-                  label="Mark as Settled"
+                  label="Finalize Payment"
                   onClick={() => setIsSettledPopupVisible(true)}
                   sticky
                 />
               ) : isHost && !isSettled ? (
                 <StickyButton
-                  label="Share Payment Breakdown"
+                  label="Share Receipt Link"
                   icon="fa-arrow-up-from-bracket"
                   onClick={() => shareReceipt(true)}
                   sticky

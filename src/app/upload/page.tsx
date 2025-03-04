@@ -140,7 +140,7 @@ export default function UploadReceiptPage() {
             onClick={handleCreateReceipt}
           />
           <SquareButton
-            label="Scan Receipt"
+            label="Upload Photo"
             color="primary"
             icon="fa-camera"
             onClick={openFileInput}
