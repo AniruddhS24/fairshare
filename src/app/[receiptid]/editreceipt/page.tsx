@@ -58,6 +58,8 @@ export default function EditReceiptPage({
     value: "0",
     edited: false,
   });
+  const [currentSubTotal, setCurrentSubTotal] = useState(0);
+
   const [counter, setCounter] = useState(0);
   const receipt_id = params.receiptid;
   const router = useRouter();
@@ -122,6 +124,24 @@ export default function EditReceiptPage({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, receipt_id]);
 
+  useEffect(() => {
+    let subtotal = 0;
+    receiptItems
+      .filter((item) => !item.deleted)
+      .forEach((item) => {
+        subtotal += parseInt(item.quantity) * parseFloat(item.price);
+      });
+    setCurrentSubTotal(subtotal);
+    const total = subtotal + parseFloat(sharedCharges.value);
+    let newPct =
+      total == 0 ? 0 : (parseFloat(additionalGratuity.value) / total) * 100;
+    if (newPct > 100) newPct = 0;
+    setAdditionalGratuityPct({
+      value: newPct.toFixed(0),
+      edited: false,
+    });
+  }, [receiptItems, sharedCharges]);
+
   const setItemProp =
     (index: number, field: keyof EditItemProps) => (value: string | number) => {
       const newReceiptItems = [...receiptItems];
@@ -160,21 +180,17 @@ export default function EditReceiptPage({
     setReceiptItems(newReceiptItems);
   };
 
-  const calculateTotal = (subtotal: boolean) => {
-    let total =
-      parseFloat(sharedCharges.value) + parseFloat(additionalGratuity.value);
-    if (subtotal) total = 0;
-    receiptItems
-      .filter((item) => !item.deleted)
-      .forEach((item) => {
-        total += parseInt(item.quantity) * parseFloat(item.price);
-      });
-    return total;
+  const calculateTotal = () => {
+    return (
+      currentSubTotal +
+      parseFloat(sharedCharges.value) +
+      parseFloat(additionalGratuity.value)
+    );
   };
 
   const handleSaveEdits = async () => {
     const data = receiptItems;
-    let receipt_changed = sharedCharges.edited;
+    let receipt_changed = sharedCharges.edited || additionalGratuity.edited;
     const promises = [];
     for (const item of data) {
       if (item.id && item.deleted) {
@@ -197,7 +213,7 @@ export default function EditReceiptPage({
         backend("PUT", `/receipt/${receipt_id}`, {
           addl_gratuity: additionalGratuity.value,
           shared_cost: sharedCharges.value,
-          grand_total: calculateTotal(false).toFixed(2),
+          grand_total: calculateTotal().toFixed(2),
         })
       );
     }
@@ -276,7 +292,7 @@ export default function EditReceiptPage({
           <Spacer size="small" />
           <LineItem
             label="Subtotal"
-            price={calculateTotal(true)}
+            price={currentSubTotal}
             labelColor="text-midgray"
             bold
           />
@@ -310,7 +326,7 @@ export default function EditReceiptPage({
                 setValue={(value) => {
                   const newPct = parseInt(value);
                   const newDollarAmount = (
-                    calculateTotal(true) *
+                    (currentSubTotal + parseFloat(sharedCharges.value)) *
                     (newPct / 100)
                   ).toFixed(2);
                   setAdditionalGratuity({
@@ -326,10 +342,12 @@ export default function EditReceiptPage({
                 value={additionalGratuity.value}
                 setValue={(value) => {
                   const newDollarAmount = parseFloat(value);
-                  const newPct = (
-                    (newDollarAmount / calculateTotal(true)) *
-                    100
-                  ).toFixed(0);
+                  const total =
+                    currentSubTotal + parseFloat(sharedCharges.value);
+                  const newPct =
+                    total == 0
+                      ? "0"
+                      : ((newDollarAmount / total) * 100).toFixed(0);
                   setAdditionalGratuityPct({
                     value: newPct,
                     edited: true,
@@ -342,7 +360,7 @@ export default function EditReceiptPage({
           <Spacer size="medium" />
           <LineItem
             label="Grand Total"
-            price={calculateTotal(false)}
+            price={calculateTotal()}
             labelColor="text-primary"
             bold
           />

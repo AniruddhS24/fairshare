@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import Text from "../../components/Text";
 import Image from "next/image";
 import LogoutSection from "@/components/LogoutSection";
-import SquareButton from "../../components/SquareButton";
 import Spacer from "@/components/Spacer";
 import ModifyButton from "@/components/ModifyButton";
 import StickyButton from "@/components/StickyButton";
@@ -17,6 +16,30 @@ import {
 } from "@/contexts/GlobalContext";
 import { backend, createEmptyReceipt, getUploadLink } from "@/lib/backend";
 import Spinner from "@/components/Spinner";
+
+interface OptionButtonProps {
+  label: string;
+  onClick: () => void;
+  icon?: string;
+  className?: string;
+}
+
+const OptionButton: React.FC<OptionButtonProps> = ({
+  label,
+  onClick,
+  icon,
+  className = "",
+}) => {
+  return (
+    <button
+      onClick={() => onClick()}
+      className={`w-full flex items-center justify-center ${className}`}
+    >
+      {icon ? <i className={`fas fa-regular fa-xl ${icon} mr-2`}></i> : null}
+      <Text type="s_heading">{label}</Text>
+    </button>
+  );
+};
 
 export default function UploadReceiptPage() {
   const { status } = useGlobalContext();
@@ -121,7 +144,7 @@ export default function UploadReceiptPage() {
     <Container centered>
       <LogoutSection></LogoutSection>
       <Spacer size="large" />
-      <Image src="/logo.png" alt="Logo" width={250} height={100} />
+      <Image src="/newlogo.png" alt="Logo" width={250} height={100} />
       <Spacer size="large" />
       <Text type="m_heading" className="text-darkest">
         Upload Receipt
@@ -132,21 +155,36 @@ export default function UploadReceiptPage() {
       </Text>
       <Spacer size="large" />
       {!loading ? (
-        <div className="w-full grid grid-cols-2 gap-4 ">
-          <SquareButton
-            label="Enter Manually"
-            color="accent"
-            icon="fa-pen-to-square"
-            onClick={handleCreateReceipt}
-          />
-          <SquareButton
+        <div className="absolute bottom-0 left-0 right-0 px-4 mb-6">
+          <OptionButton
             label="Upload Photo"
-            color="primary"
-            icon="fa-camera"
             onClick={openFileInput}
+            icon="fa-images"
+            className={`bg-primary py-3 px-6 rounded-full border border-2 border-primary text-white transition-colors duration-150 ease-in-out active:bg-primarydark`}
+          />
+          <Spacer size="medium" />
+          <OptionButton
+            label="Enter Manually"
+            icon="fa-pen"
+            onClick={handleCreateReceipt}
+            className={`bg-white py-3 px-6 rounded-full border border-2 border-primarylight text-primary transition-colors duration-150 ease-in-out active:bg-primarylight`}
           />
         </div>
       ) : (
+        // <div className="w-full grid grid-cols-2 gap-4 ">
+        //   <SquareButton
+        //     label="Enter Manually"
+        //     color="accent"
+        //     icon="fa-pen-to-square"
+        //     onClick={handleCreateReceipt}
+        //   />
+        //   <SquareButton
+        //     label="Upload Photo"
+        //     color="primary"
+        //     icon="fa-camera"
+        //     onClick={openFileInput}
+        //   />
+        // </div>
         <div className="flex w-full items-center justify-center">
           <Spinner color="text-primary" />
         </div>

@@ -66,7 +66,7 @@ const PaymentBreakdown: React.FC<PaymentBreakdownProps> = ({
   }, [items, splits, sharedCharges]);
 
   return (
-    <div className="w-full max-w-md mx-auto border border-lightgray rounded-lg overflow-hidden">
+    <div className="w-full max-w-md mx-auto shadow-[0px_0px_6px_0px_rgba(0,0,0,0.10)] rounded-lg overflow-hidden">
       <button
         onClick={() => setIsOpen(!isOpen)}
         className={`w-full flex justify-between items-center px-3 ${

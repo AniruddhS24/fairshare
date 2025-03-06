@@ -224,8 +224,8 @@ export default function LiveReceiptPage({
     if (navigator.share) {
       try {
         await navigator.share({
-          title: "FairShare",
-          text: "Split your receipt with FairShare",
+          title: "Tabify",
+          text: "Split your receipt with Tabify",
           url: url,
         });
       } catch (error) {
@@ -293,6 +293,7 @@ export default function LiveReceiptPage({
   };
 
   const markSettled = async () => {
+    setBanner(null);
     setIsSettledPopupVisible(false);
     setIsSettled(true);
     await markAsSettled(params.receiptid);
@@ -311,7 +312,7 @@ export default function LiveReceiptPage({
   const sendToVenmo = () => {
     // Go to Venmo and fill price to pay with
     const amount = myTotal;
-    const note = "FairShare restaurant split";
+    const note = "Tabify restaurant split";
     const venmoURI = `venmo://paycharge?txn=pay&amount=${amount}&audience=private&note=${note}`;
 
     // Open the Venmo app (if installed) or the web page
@@ -427,12 +428,14 @@ export default function LiveReceiptPage({
                 className="ms-3"
                 disabled={isSettled}
               />
-              {/* <HostActionButton
-                icon="fa-arrow-up-from-bracket"
-                onClick={() => shareReceipt(true)}
-                className="ms-3"
-                disabled={isSettled}
-              /> */}
+              {!unclaimedItems ? (
+                <HostActionButton
+                  icon="fa-arrow-up-from-bracket"
+                  onClick={() => shareReceipt(true)}
+                  className="ms-3"
+                  disabled={isSettled}
+                />
+              ) : null}
             </div>
           ) : null}
         </div>
@@ -464,7 +467,7 @@ export default function LiveReceiptPage({
         <Spacer size="medium" />
         {!loading ? (
           selectedTab == 0 ? (
-            <div className="w-full">
+            <div className="w-full pb-20">
               <PaymentBreakdown
                 items={receiptItems}
                 splits={mergedSplits}

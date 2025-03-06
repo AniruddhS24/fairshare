@@ -137,7 +137,7 @@ const DynamicSelection: React.FC<DynamicSelectionProps> = ({
             <div className={`flex justify-between items-center w-full`}>
               <div className="flex items-center">
                 <Text type="body_bold" className="text-darkest">
-                  {item.quantity} {item.name}
+                  {item.quantity} {item.name} |
                 </Text>
                 {Object.keys(allSplits).length < parseInt(item.quantity) ? (
                   <div className="flex ms-1 px-1 text-error font-bold items-center">
@@ -147,16 +147,16 @@ const DynamicSelection: React.FC<DynamicSelectionProps> = ({
                     ></i>
                     <Text type="body_bold">
                       {parseInt(item.quantity) - Object.keys(allSplits).length}{" "}
-                      Unclaimed
+                      unclaimed
                     </Text>
                   </div>
                 ) : (
-                  <div className="flex ms-1 px-1 text-primary font-bold items-center">
+                  <div className="flex ms-1 px-1 text-accent font-bold items-center">
                     <i
                       className={`fas fa-circle mr-1`}
                       style={{ fontSize: "8px" }}
                     ></i>
-                    <Text type="body_bold">Claimed</Text>
+                    <Text type="body_bold">claimed</Text>
                   </div>
                 )}
               </div>
@@ -168,8 +168,8 @@ const DynamicSelection: React.FC<DynamicSelectionProps> = ({
               {!disabled &&
               Object.keys(allSplits).length < parseInt(item.quantity) ? (
                 <button
-                  className="w-10 h-10 rounded-full bg-primary flex items-center justify-center font-bold 
-             text-white transition-transform duration-150 active:scale-90"
+                  className="w-10 h-10 rounded-full bg-lightestgray flex items-center justify-center font-bold 
+             text-primary transition-transform duration-150 active:scale-90 active:bg-lightgray"
                   onClick={() => handleAddSplit(item.id)}
                 >
                   <i className="fas fa-plus"></i>
@@ -178,10 +178,14 @@ const DynamicSelection: React.FC<DynamicSelectionProps> = ({
               {Object.entries(allSplits).map(([splitId, userNames]) => (
                 <button
                   key={splitId}
-                  className={`w-auto px-4 h-10 rounded-lg border border-primary text-primary ${
+                  className={`w-auto px-4 h-10 rounded-lg border text-primary ${
+                    !disabled
+                      ? "transition-transform duration-150 active:scale-90 active:bg-primarylight"
+                      : ""
+                  } ${
                     userNames.mine
-                      ? "font-bold bg-[#087a8733] border-2"
-                      : "font-normal"
+                      ? "font-bold border-primary border-2"
+                      : "border-primarylight font-normal"
                   }`}
                   disabled={disabled}
                   onClick={() => handleAdjustSplit(item.id, splitId)}

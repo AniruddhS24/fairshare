@@ -61,7 +61,7 @@ const PercentageInput: React.FC<PercentageInputProps> = ({
         onChange={handleChange}
         onFocus={handleFocus}
         onBlur={handleBlur}
-        className={`w-full pl-3 font-normal text-darkest border border-lightgray placeholder-midgray rounded-xl py-2 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent ${className}`}
+        className={`w-full pl-3 font-normal text-darkest bg-lightestgray placeholder-midgray rounded-xl py-2 focus:outline-none ${className}`}
         placeholder="0"
       />
       <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500">

@@ -25,7 +25,7 @@ const ItemInput: React.FC<InputProps> = ({
       placeholder={placeholder}
       value={value}
       onChange={handleChange}
-      className={`w-full font-normal text-darkest border border-lightgray placeholder-midgray rounded-xl py-2 px-3 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent ${className}`}
+      className={`w-full font-normal text-darkest bg-lightestgray placeholder-midgray rounded-xl py-2 px-3 focus:outline-none ${className}`}
     />
   );
 };

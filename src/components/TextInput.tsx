@@ -1,21 +1,22 @@
 "use client";
 
-import React from 'react';
+import React from "react";
 
 interface InputProps {
   placeholder?: string;
   value: string;
   setValue: (value: string) => void;
   className?: string; // Allow additional Tailwind classes
+  setFocused?: (focused: boolean) => void;
 }
 
 const TextInput: React.FC<InputProps> = ({
-  placeholder = 'Enter text...',
+  placeholder = "Enter text...",
   value,
   setValue,
-  className = '',
+  className = "",
+  setFocused,
 }) => {
-
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setValue(e.target.value);
   };
@@ -26,7 +27,13 @@ const TextInput: React.FC<InputProps> = ({
       placeholder={placeholder}
       value={value}
       onChange={handleChange}
-      className={`w-full font-normal text-darkest border border-lightgray placeholder-midgray rounded-xl py-2 px-4 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent ${className}`}
+      className={`w-full font-normal text-darkest bg-lightestgray placeholder-midgray rounded-xl py-2 px-4 focus:outline-none ${className}`}
+      onFocus={() => setFocused?.(true)}
+      onBlur={() => {
+        setTimeout(() => {
+          setFocused?.(false);
+        }, 50);
+      }}
     />
   );
 };

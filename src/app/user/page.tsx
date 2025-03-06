@@ -32,6 +32,7 @@ const PhoneVerification: React.FC<PhoneVerificationProps> = ({
 }) => {
   const inputRef = useRef<HTMLInputElement>(null);
   const [resentCode, setResentCode] = useState(false);
+  const [inputFocused, setInputFocused] = useState(false);
 
   // Update the code when the user types
   const handleInputChange = (value: string) => {
@@ -42,7 +43,24 @@ const PhoneVerification: React.FC<PhoneVerificationProps> = ({
   // Focus the hidden input when the user clicks on the container
   const handleSlotClick = () => {
     inputRef.current?.focus();
+    setInputFocused(true);
   };
+
+  useEffect(() => {
+    if (!inputRef.current) return;
+
+    const handleBlur = () => {
+      setTimeout(() => {
+        setInputFocused(false);
+      }, 50);
+    };
+
+    inputRef.current.addEventListener("blur", handleBlur);
+
+    return () => {
+      inputRef.current?.removeEventListener("blur", handleBlur);
+    };
+  }, []);
 
   return (
     <Container centered>
@@ -78,13 +96,14 @@ const PhoneVerification: React.FC<PhoneVerificationProps> = ({
             </div>
           ))}
       </div>
-      <Spacer size="large" />
+      {inputFocused ? <Spacer size="large" /> : null}
       <StickyButton
         label="Verify"
         onClick={async () => handleCode(code)}
         disabled={code.length !== 6}
+        sticky={!inputFocused}
       />
-      <Spacer size="medium" />
+      <Spacer size="large" />
       {!resentCode ? (
         <div className="w-full flex justify-center items-center">
           <Text type="body">Did not receive a code? </Text>
@@ -110,7 +129,9 @@ function UserOnboardingPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [nameFocused, setNameFocused] = useState(false);
   const [name, setName] = useState<string>("");
+  const [phoneFocused, setPhoneFocused] = useState(false);
   const [phoneNumber, setPhoneNumber] = useState<string>("");
   const [venmoHandle] = useState<string>("");
   const [code, setCode] = useState<string>("");
@@ -202,10 +223,10 @@ function UserOnboardingPage() {
   ) : !waitingForCode ? (
     <Container centered>
       <Spacer size="large" />
-      <Image src="/logo.png" alt="Logo" width={250} height={100} />
+      <Image src="/newlogo.png" alt="Logo" width={250} height={100} />
       <Spacer size="large" />
       <Text type="m_heading" className="text-darkest">
-        Sign In
+        Welcome
       </Text>
       <Text type="body" className="text-center text-midgray">
         Get started splitting receipts seamlessly
@@ -215,6 +236,7 @@ function UserOnboardingPage() {
         placeholder="Phone number"
         value={phoneNumber}
         setValue={setPhoneNumber}
+        setFocused={setPhoneFocused}
       />
       {/* <Spacer size="medium" />
       <TextInput
@@ -223,12 +245,19 @@ function UserOnboardingPage() {
         setValue={setVenmoHandle}
       /> */}
       <Spacer size="large" />
-      <StickyButton label="Next" onClick={handleNext} disabled={!phoneNumber} />
-      <Spacer size="large" />
-      <Text type="body" className="text-center text-midgray text-xs">
-        By providing your phone number, you consent to receive SMS messages from
-        FairShare. Message and data rates may apply. You may opt-out at any
-        time.{" "}
+      <StickyButton
+        label="Next"
+        onClick={handleNext}
+        disabled={!phoneNumber}
+        sticky={!phoneFocused}
+      />
+      {phoneFocused ? <Spacer size="large" /> : null}
+      <Text
+        type="body"
+        className="text-center text-midgray text-[0.625rem] leading-[1.5]"
+      >
+        By providing your phone number, you consent to receive SMS texts from
+        Tabify. Message and data rates may apply. You may opt-out at any time.{" "}
         <a
           className="underline"
           href="https://www.freeprivacypolicy.com/live/b3b3f6bb-e1e7-4c47-99d4-70af72330916"
@@ -240,7 +269,7 @@ function UserOnboardingPage() {
   ) : newUserSignup ? (
     <Container centered>
       <Spacer size="large" />
-      <Image src="/logo.png" alt="Logo" width={250} height={100} />
+      <Image src="/newlogo.png" alt="Logo" width={250} height={100} />
       <Spacer size="large" />
       <Text type="m_heading" className="text-darkest">
         Enter Information
@@ -254,9 +283,15 @@ function UserOnboardingPage() {
         value={phoneNumber}
         setValue={setPhoneNumber}
         disabled
+        className={"font-extrabold text-primary opacity-100"}
       />
       <Spacer size="medium" />
-      <TextInput placeholder="Name" value={name} setValue={setName} />
+      <TextInput
+        placeholder="Name"
+        value={name}
+        setValue={setName}
+        setFocused={setNameFocused}
+      />
       {/* <Spacer size="medium" />
       <TextInput
         placeholder="Venmo Handle (optional)"
@@ -264,7 +299,12 @@ function UserOnboardingPage() {
         setValue={setVenmoHandle}
       /> */}
       <Spacer size="large" />
-      <StickyButton label="Next" onClick={handleSignupNext} disabled={!name} />
+      <StickyButton
+        label="Next"
+        onClick={handleSignupNext}
+        disabled={!name}
+        sticky={!nameFocused}
+      />
     </Container>
   ) : (
     <PhoneVerification

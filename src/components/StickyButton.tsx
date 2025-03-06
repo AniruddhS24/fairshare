@@ -44,7 +44,7 @@ const StickyButton: React.FC<StickyButtonProps> = ({
   ) : (
     <button
       onClick={handleClick}
-      className={`w-full max-w-[300px] flex items-center justify-center bg-primary p-2.5 rounded-full transition-colors duration-150 ease-in-out active:bg-primarydark ${
+      className={`w-full flex items-center justify-center bg-primary p-2.5 rounded-full transition-colors duration-150 ease-in-out active:bg-primarydark ${
         sticky
           ? "fixed bottom-4 left-1/2 transform -translate-x-1/2 z-10 max-w-[90%]"
           : ""

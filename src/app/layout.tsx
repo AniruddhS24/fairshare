@@ -16,8 +16,8 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "FairShare",
-  description: "FairShare is a web app that helps you split receipts.",
+  title: "Tabify",
+  description: "Tabify is a web app that helps you split receipts.",
 };
 
 export default function RootLayout({

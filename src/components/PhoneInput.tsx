@@ -8,6 +8,7 @@ interface InputProps {
   setValue: (value: string) => void;
   className?: string;
   disabled?: boolean;
+  setFocused?: (focused: boolean) => void;
 }
 
 const PhoneInput: React.FC<InputProps> = ({
@@ -16,6 +17,7 @@ const PhoneInput: React.FC<InputProps> = ({
   setValue,
   className = "",
   disabled,
+  setFocused,
 }) => {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;
@@ -38,8 +40,14 @@ const PhoneInput: React.FC<InputProps> = ({
       placeholder={placeholder}
       value={value}
       onChange={handleChange}
-      className={`w-full font-normal text-darkest border border-lightgray placeholder-midgray rounded-xl py-2 px-4 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent ${className}`}
+      className={`w-full font-normal text-darkest bg-lightestgray placeholder-midgray rounded-xl py-2 px-4 focus:outline-none ${className}`}
       disabled={disabled}
+      onFocus={() => setFocused?.(true)}
+      onBlur={() => {
+        setTimeout(() => {
+          setFocused?.(false);
+        }, 50);
+      }}
     />
   );
 };
