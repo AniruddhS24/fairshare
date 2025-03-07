@@ -252,11 +252,8 @@ function UserOnboardingPage() {
         sticky={!phoneFocused}
       />
       {phoneFocused ? <Spacer size="large" /> : null}
-      <Text
-        type="body"
-        className="text-center text-midgray text-[0.625rem] leading-[1.5]"
-      >
-        By providing your phone number, you consent to receive SMS texts from
+      <Text type="body" className="text-center text-midgray text-xs">
+        By providing your phone number, you consent to receive SMS alerts from
         Tabify. Message and data rates may apply. You may opt-out at any time.{" "}
         <a
           className="underline"

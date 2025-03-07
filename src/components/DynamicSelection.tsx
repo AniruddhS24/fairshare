@@ -137,10 +137,10 @@ const DynamicSelection: React.FC<DynamicSelectionProps> = ({
             <div className={`flex justify-between items-center w-full`}>
               <div className="flex items-center">
                 <Text type="body_bold" className="text-darkest">
-                  {item.quantity} {item.name} |
+                  {item.quantity} {item.name}
                 </Text>
                 {Object.keys(allSplits).length < parseInt(item.quantity) ? (
-                  <div className="flex ms-1 px-1 text-error font-bold items-center">
+                  <div className="flex ms-2 px-1 text-error font-bold items-center">
                     <i
                       className={`fas fa-circle mr-1`}
                       style={{ fontSize: "8px" }}
