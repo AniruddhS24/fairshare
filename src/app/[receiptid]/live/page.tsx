@@ -431,7 +431,11 @@ export default function LiveReceiptPage({
           ) : null}
         </div>
         <Spacer size="small" />
-        {isHost ? (
+        {isSettled ? (
+          <Text type="body" className="text-midgray">
+            Receipt has been finalized.
+          </Text>
+        ) : isHost ? (
           <Text type="body" className="text-midgray">
             Tap the portions you consumed and share receipt link with other
             consumers. Payment will{" "}

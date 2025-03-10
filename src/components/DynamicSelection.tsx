@@ -224,7 +224,7 @@ const DynamicSelection: React.FC<DynamicSelectionProps> = ({
                   onClick={() => handleAdjustSplit(item.id, splitId)}
                 >
                   <span>{userNames.consumers.join(" + ")}</span>
-                  {!userNames.mine && (
+                  {!userNames.mine && !disabled && (
                     <span className="border border-lightestgray p-1 rounded-md flex items-center justify-center">
                       <img
                         src="/split_scene_24dp_29567D_FILL0_wght400_GRAD0_opsz24.svg"
