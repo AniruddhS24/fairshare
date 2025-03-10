@@ -50,7 +50,7 @@ export default function ShareReceiptPage({
         await navigator.share({
           title: "FairShare",
           text: "Split your receipt with FairShare",
-          url: `https://splitmyreceipt.com/user?receiptid=${receipt_id}&onboardConsumer=true`, // URL to share (should be link/user?receiptid=...&onboardConsumer=true&page=split)
+          url: `https://tabify.live/user?receiptid=${receipt_id}&onboardConsumer=true`, // URL to share (should be link/user?receiptid=...&onboardConsumer=true&page=split)
         });
       } catch (error) {
         console.error("Error sharing:", error);

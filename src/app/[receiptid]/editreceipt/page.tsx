@@ -92,17 +92,19 @@ export default function EditReceiptPage({
       const receipt_items = await getItems(receipt_id);
       let total = 0;
       for (const item of receipt_items) {
+        const all_qty_price =
+          safeParseFloat(item.price) * parseInt(item.quantity);
         items.push({
           id: item.id,
           index: ct,
           name: item.name,
           quantity: item.quantity,
-          price: item.price,
+          price: all_qty_price.toFixed(2),
           edited: false,
           deleted: false,
         });
         ct++;
-        total += parseInt(item.quantity) * parseFloat(item.price);
+        total += all_qty_price;
       }
       setCounter(ct);
       if (items.length == 0) addItem();
@@ -111,7 +113,7 @@ export default function EditReceiptPage({
       setSharedCharges({ value: receipt.shared_cost, edited: false });
       setAdditionalGratuity({ value: receipt.addl_gratuity, edited: false });
       const newPct = (
-        (parseFloat(receipt.addl_gratuity) / (total == 0 ? 1 : total)) *
+        (safeParseFloat(receipt.addl_gratuity) / (total == 0 ? 1 : total)) *
         100
       ).toFixed(0);
       setAdditionalGratuityPct({
@@ -129,10 +131,17 @@ export default function EditReceiptPage({
     receiptItems
       .filter((item) => !item.deleted)
       .forEach((item) => {
-        subtotal += parseInt(item.quantity) * parseFloat(item.price);
+        subtotal += safeParseFloat(item.price);
       });
     setCurrentSubTotal(subtotal);
-    const total = subtotal + parseFloat(sharedCharges.value);
+    const total = subtotal + safeParseFloat(sharedCharges.value);
+    // const newGratuity =
+    //   (safeParseFloat(additionalGratuityPct.value) / 100) * total;
+    // alert(newGratuity);
+    // setAdditionalGratuity({
+    //   value: newGratuity.toFixed(2),
+    //   edited: false,
+    // });
     let newPct =
       total == 0 ? 0 : (parseFloat(additionalGratuity.value) / total) * 100;
     if (newPct > 100) newPct = 0;
@@ -183,9 +192,13 @@ export default function EditReceiptPage({
   const calculateTotal = () => {
     return (
       currentSubTotal +
-      parseFloat(sharedCharges.value) +
-      parseFloat(additionalGratuity.value)
+      safeParseFloat(sharedCharges.value) +
+      safeParseFloat(additionalGratuity.value)
     );
+  };
+
+  const safeParseFloat = (value: string) => {
+    return parseFloat(value === "" ? "0" : value);
   };
 
   const handleSaveEdits = async () => {
@@ -198,13 +211,28 @@ export default function EditReceiptPage({
         promises.push(deleteItem(receipt_id, item.id));
       } else if (item.id && item.edited) {
         receipt_changed = true;
+        const per_item_price =
+          safeParseFloat(item.price) / parseInt(item.quantity);
         promises.push(
-          updateItem(receipt_id, item.id, item.name, item.quantity, item.price)
+          updateItem(
+            receipt_id,
+            item.id,
+            item.name,
+            item.quantity,
+            per_item_price.toFixed(2)
+          )
         );
       } else if (!item.id && !item.deleted) {
         receipt_changed = true;
+        const per_item_price =
+          safeParseFloat(item.price) / parseInt(item.quantity);
         promises.push(
-          createItem(receipt_id, item.name, item.quantity, item.price)
+          createItem(
+            receipt_id,
+            item.name,
+            item.quantity,
+            per_item_price.toFixed(2)
+          )
         );
       }
     }
@@ -309,7 +337,12 @@ export default function EditReceiptPage({
             <div className="col-span-3 flex justify-center items-center">
               <PriceInput
                 value={sharedCharges.value}
-                setValue={(value) => setSharedCharges({ value, edited: true })}
+                setValue={(value) =>
+                  setSharedCharges({
+                    value,
+                    edited: true,
+                  })
+                }
               />
             </div>
           </div>
@@ -324,16 +357,19 @@ export default function EditReceiptPage({
               <PercentageInput
                 value={additionalGratuityPct.value}
                 setValue={(value) => {
-                  const newPct = parseInt(value);
+                  const newPct = parseInt(value || "0");
                   const newDollarAmount = (
-                    (currentSubTotal + parseFloat(sharedCharges.value)) *
+                    (currentSubTotal + safeParseFloat(sharedCharges.value)) *
                     (newPct / 100)
                   ).toFixed(2);
                   setAdditionalGratuity({
                     value: newDollarAmount,
                     edited: true,
                   });
-                  setAdditionalGratuityPct({ value, edited: true });
+                  setAdditionalGratuityPct({
+                    value,
+                    edited: true,
+                  });
                 }}
               />
             </div>
@@ -341,9 +377,9 @@ export default function EditReceiptPage({
               <PriceInput
                 value={additionalGratuity.value}
                 setValue={(value) => {
-                  const newDollarAmount = parseFloat(value);
+                  const newDollarAmount = safeParseFloat(value);
                   const total =
-                    currentSubTotal + parseFloat(sharedCharges.value);
+                    currentSubTotal + safeParseFloat(sharedCharges.value);
                   const newPct =
                     total == 0
                       ? "0"
@@ -352,7 +388,10 @@ export default function EditReceiptPage({
                     value: newPct,
                     edited: true,
                   });
-                  setAdditionalGratuity({ value, edited: true });
+                  setAdditionalGratuity({
+                    value,
+                    edited: true,
+                  });
                 }}
               />
             </div>

@@ -219,8 +219,8 @@ export default function LiveReceiptPage({
 
   const shareReceipt = async (onboarding: boolean) => {
     const url = onboarding
-      ? `https://splitmyreceipt.com/user?receiptid=${params.receiptid}&onboardConsumer=true`
-      : `https://splitmyreceipt.com/${params.receiptid}/live`;
+      ? `https://tabify.live/user?receiptid=${params.receiptid}&onboardConsumer=true`
+      : `https://tabify.live/${params.receiptid}/live`;
     if (navigator.share) {
       try {
         await navigator.share({
@@ -298,15 +298,6 @@ export default function LiveReceiptPage({
     setIsSettled(true);
     await markAsSettled(params.receiptid);
     await backend("GET", `/receipt/${params.receiptid}/refresh`);
-  };
-
-  const claimedItemTotal = () => {
-    let total = 0;
-    for (const split of Object.values(splits)) {
-      if (split.item_id in receiptItems)
-        total += parseFloat(receiptItems[split.item_id].price);
-    }
-    return total;
   };
 
   const sendToVenmo = () => {
@@ -443,12 +434,16 @@ export default function LiveReceiptPage({
         {isHost ? (
           <Text type="body" className="text-midgray">
             Tap the portions you consumed and share receipt link with other
-            consumers.
+            consumers. Payment will{" "}
+            <span className="text-error font-semibold">not be finalized</span>{" "}
+            until all portions are claimed.
           </Text>
         ) : (
           <Text type="body" className="text-midgray">
-            Tap the portions you consumed. Tax, tip, and shared charges will be
-            added once everyone has added their splits.
+            Tap the portions you consumed. Only pay the host{" "}
+            <span className="text-error font-semibold">
+              after they have finalized payment.
+            </span>
           </Text>
         )}
         {isHost ? (
@@ -475,6 +470,7 @@ export default function LiveReceiptPage({
                 sharedCharges={isSettled ? sharedCharges.toFixed(2) : null}
                 total={myTotal}
                 setTotal={setMyTotal}
+                isSettled={isSettled}
               ></PaymentBreakdown>
               <Spacer size="medium" />
               <DynamicSelection
@@ -528,6 +524,7 @@ export default function LiveReceiptPage({
                   icon="fa-floppy-disk"
                   onClick={saveEdits}
                   sticky
+                  secondary
                 />
               ) : isHost && !unclaimedItems && !isSettled ? (
                 <StickyButton
@@ -575,12 +572,8 @@ export default function LiveReceiptPage({
                 bold
               ></LineItem>
               <LineItem
-                label="Current Total"
-                price={
-                  claimedItemTotal() +
-                  parseFloat(receipt.shared_cost) +
-                  parseFloat(receipt.addl_gratuity)
-                }
+                label="Grand Total"
+                price={parseFloat(receipt.grand_total)}
                 labelColor="text-primary"
                 bold
               ></LineItem>

@@ -11,6 +11,7 @@ interface PaymentBreakdownProps {
   sharedCharges: string | null;
   total: number;
   setTotal: React.Dispatch<React.SetStateAction<number>>;
+  isSettled: boolean;
 }
 
 interface MyItem {
@@ -24,6 +25,7 @@ const PaymentBreakdown: React.FC<PaymentBreakdownProps> = ({
   sharedCharges,
   total,
   setTotal,
+  isSettled,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [myItems, setMyItems] = useState<{ [key: string]: MyItem }>({});
@@ -98,7 +100,7 @@ const PaymentBreakdown: React.FC<PaymentBreakdownProps> = ({
             ></LineItem>
           </div>
         ))}
-        {sharedCharges ? (
+        {isSettled && sharedCharges ? (
           <LineItem
             label="Shared Charges"
             price={parseFloat(sharedCharges)}

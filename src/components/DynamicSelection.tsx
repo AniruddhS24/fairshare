@@ -33,6 +33,7 @@ const DynamicSelection: React.FC<DynamicSelectionProps> = ({
   onSplitChange,
 }) => {
   const { user } = useGlobalContext();
+  // const [activeMenu, setActiveMenu] = useState<string | null>(null);
 
   function generateHexUUID16() {
     const now = Date.now().toString(16); // Timestamp in hex
@@ -58,6 +59,7 @@ const DynamicSelection: React.FC<DynamicSelectionProps> = ({
     }));
 
     onSplitChange?.();
+    // setActiveMenu(null);
   };
 
   const handleAdjustSplit = async (itemId: string, splitId: string) => {
@@ -128,35 +130,32 @@ const DynamicSelection: React.FC<DynamicSelectionProps> = ({
 
         return (
           <div key={item.id} className="w-full mb-4">
-            {/* <LineItem
-              label={`${item.quantity} ${item.name}`}
-              price={parseFloat(item.price) * parseInt(item.quantity)}
-              labelColor="text-darkest"
-              bold
-            /> */}
             <div className={`flex justify-between items-center w-full`}>
               <div className="flex items-center">
                 <Text type="body_bold" className="text-darkest">
-                  {item.quantity} {item.name}
+                  {item.quantity}{" "}
+                  {item.name.length > 23
+                    ? `${item.name.substring(0, 23)}...`
+                    : item.name}
                 </Text>
                 {Object.keys(allSplits).length < parseInt(item.quantity) ? (
-                  <div className="flex ms-2 px-1 text-error font-bold items-center">
+                  <div className="flex ms-2 px-2 text-error items-center bg-red-50 rounded-full">
                     <i
                       className={`fas fa-circle mr-1`}
                       style={{ fontSize: "8px" }}
                     ></i>
                     <Text type="body_bold">
                       {parseInt(item.quantity) - Object.keys(allSplits).length}{" "}
-                      unclaimed
+                      left
                     </Text>
                   </div>
                 ) : (
-                  <div className="flex ms-1 px-1 text-accent font-bold items-center">
+                  <div className="flex ms-1 px-2 text-accent font-bold items-center bg-teal-50 rounded-full">
                     <i
                       className={`fas fa-circle mr-1`}
                       style={{ fontSize: "8px" }}
                     ></i>
-                    <Text type="body_bold">claimed</Text>
+                    <Text type="body_bold">Claimed</Text>
                   </div>
                 )}
               </div>
@@ -168,30 +167,81 @@ const DynamicSelection: React.FC<DynamicSelectionProps> = ({
               {!disabled &&
               Object.keys(allSplits).length < parseInt(item.quantity) ? (
                 <button
-                  className="w-10 h-10 rounded-full bg-lightestgray flex items-center justify-center font-bold 
-             text-primary transition-transform duration-150 active:scale-90 active:bg-lightgray"
+                  className="w-10 h-10 rounded-full bg-white border-2 border-lightestgray flex items-center justify-center font-bold
+                 text-primary transition-transform duration-150 active:scale-90 active:bg-lightgray"
                   onClick={() => handleAddSplit(item.id)}
                 >
                   <i className="fas fa-plus"></i>
                 </button>
-              ) : null}
+              ) : // <div className="relative">
+              //   <button
+              //     className="w-10 h-10 rounded-full bg-lightestgray flex items-center justify-center font-bold text-primary transition-transform duration-150 active:scale-90 active:bg-lightgray"
+              //     onClick={() =>
+              //       setActiveMenu(activeMenu === item.id ? null : item.id)
+              //     }
+              //   >
+              //     <i className="fas fa-plus"></i>
+              //   </button>
+              //   {activeMenu === item.id && (
+              //     <motion.div
+              //       initial="hidden"
+              //       animate="visible"
+              //       exit="hidden"
+              //       variants={optionVariants}
+              //       className="absolute bottom-full mb-2 bg-white shadow-lg rounded-lg border w-48 z-10"
+              //     >
+              //       {[
+              //         "Claim One Item",
+              //         "Start Split",
+              //         "Split Across Table",
+              //       ].map((option) => (
+              //         <button
+              //           key={option}
+              //           className="w-full text-left px-4 py-2 hover:bg-gray-100"
+              //           onClick={() => handleAddSplit(item.id)}
+              //         >
+              //           {option}
+              //         </button>
+              //       ))}
+              //     </motion.div>
+              //   )}
+              // </div>
+              null}
               {Object.entries(allSplits).map(([splitId, userNames]) => (
                 <button
                   key={splitId}
-                  className={`w-auto px-4 h-10 rounded-lg border text-primary ${
+                  className={`w-auto px-2 h-10 rounded-lg border text-primary flex items-center justify-center gap-1 ${
                     !disabled
-                      ? "transition-transform duration-150 active:scale-90 active:bg-primarylight"
+                      ? "transition-transform duration-150 active:scale-90"
                       : ""
                   } ${
                     userNames.mine
-                      ? "font-bold border-primary border-2"
+                      ? "font-bold border-primary"
                       : "border-primarylight font-normal"
                   }`}
+                  style={{ borderWidth: `${userNames.mine ? "2px" : "1.5px"}` }}
                   disabled={disabled}
                   onClick={() => handleAdjustSplit(item.id, splitId)}
                 >
-                  {userNames.consumers.join(", ")}
+                  <span>{userNames.consumers.join(" + ")}</span>
+                  {!userNames.mine && (
+                    <span className="border border-lightestgray p-1 rounded-md flex items-center justify-center">
+                      <img
+                        src="/split_scene_24dp_29567D_FILL0_wght400_GRAD0_opsz24.svg"
+                        alt="Split Icon"
+                        className="w-4 h-4"
+                      />
+                    </span>
+                  )}
                 </button>
+              ))}
+              {Array.from({
+                length: parseInt(item.quantity) - Object.keys(allSplits).length,
+              }).map((_, i) => (
+                <div
+                  key={`placeholder-${i}`}
+                  className="w-10 h-10 rounded-full bg-lightestgray flex items-center justify-center border border-dashed"
+                ></div>
               ))}
             </div>
           </div>

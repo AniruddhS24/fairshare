@@ -9,6 +9,7 @@ interface StickyButtonProps {
   sticky?: boolean; // Prop to determine if the button should be sticky
   disabled?: boolean; // Prop to determine if the button should be disabled
   onComplete?: () => void; // Callback to set loading to false
+  secondary?: boolean;
 }
 
 const StickyButton: React.FC<StickyButtonProps> = ({
@@ -17,6 +18,7 @@ const StickyButton: React.FC<StickyButtonProps> = ({
   icon,
   sticky = false,
   disabled = false,
+  secondary = false,
 }) => {
   const [loading, setLoading] = React.useState(false);
 
@@ -33,7 +35,11 @@ const StickyButton: React.FC<StickyButtonProps> = ({
 
   return loading ? (
     <button
-      className={`w-full max-w-[300px] flex items-center justify-center bg-primary p-2.5 rounded-full transition-colors duration-150 ease-in-out active:bg-primarydark ${
+      className={`w-full max-w-[300px] flex items-center justify-center ${
+        secondary
+          ? "bg-accent text-white active:bg-accentdark"
+          : "bg-primary text-white active:bg-primarydark"
+      } p-2.5 rounded-full transition-colors duration-150 ease-in-out  ${
         sticky
           ? "fixed bottom-4 left-1/2 transform -translate-x-1/2 z-10 max-w-[90%]"
           : ""
@@ -44,7 +50,11 @@ const StickyButton: React.FC<StickyButtonProps> = ({
   ) : (
     <button
       onClick={handleClick}
-      className={`w-full flex items-center justify-center bg-primary p-2.5 rounded-full transition-colors duration-150 ease-in-out active:bg-primarydark ${
+      className={`w-full flex items-center justify-center  ${
+        secondary
+          ? "bg-accent text-white active:bg-accentdark"
+          : "bg-primary text-white active:bg-primarydark"
+      } p-2.5 rounded-full transition-colors duration-150 ease-in-out  ${
         sticky
           ? "fixed bottom-4 left-1/2 transform -translate-x-1/2 z-10 max-w-[90%]"
           : ""
@@ -67,11 +77,9 @@ const StickyButton: React.FC<StickyButtonProps> = ({
           ></path>
         </svg>
       ) : icon ? (
-        <i className={`fas fa-regular ${icon} mr-2 text-white`}></i>
+        <i className={`fas fa-regular ${icon} mr-2`}></i>
       ) : null}
-      <Text type="s_heading" className="text-white">
-        {label}
-      </Text>
+      <Text type="s_heading">{label}</Text>
     </button>
   );
 };

@@ -1,11 +1,9 @@
-"use client";
-
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 
 interface PriceInputProps {
   value: string;
   setValue: (value: string) => void;
-  className?: string; // Allow additional Tailwind classes
+  className?: string;
 }
 
 const PriceInput: React.FC<PriceInputProps> = ({
@@ -14,44 +12,49 @@ const PriceInput: React.FC<PriceInputProps> = ({
   className = "",
 }) => {
   const [startedEdit, setStartedEdit] = useState(false);
-  const [prevValue, setPrevValue] = useState(value);
+  const inputRef = useRef<HTMLInputElement | null>(null); // Ref to input
 
   const formatPrice = (val: string) => {
-    const formatted = val.replace(/\D/g, "");
+    const formatted = val.replace(/\D/g, ""); // Remove non-numeric characters
     if (formatted === "") {
       return "0.00";
     }
     const parsedValue = parseInt(formatted, 10);
-    const dollarValue = (parsedValue / 100).toFixed(2);
-    return dollarValue;
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const inputVal = e.target.value;
-    let diffChar = inputVal[inputVal.length - 1];
-    for (let i = 0; i < inputVal.length; i++) {
-      if (inputVal[i] !== prevValue[i]) {
-        diffChar = inputVal[i];
-        break;
-      }
-    }
-    setPrevValue(inputVal);
-    if (startedEdit) {
-      const formattedValue = formatPrice(diffChar);
-      setValue(formattedValue);
-      setStartedEdit(false);
-    } else {
-      setValue(formatPrice(inputVal));
-    }
+    return (parsedValue / 100).toFixed(2);
   };
 
   const handleFocus = () => {
-    setStartedEdit(true); // Set editing to true when focused
+    if (!startedEdit) {
+      setValue(""); // Clear input when first tapped
+      setStartedEdit(true);
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setValue(formatPrice(e.target.value));
   };
 
   const handleBlur = () => {
-    setStartedEdit(false); // Reset editing state when the input loses focus
+    if (value === "") {
+      setValue("0.00"); // Reset to 0.00 if empty
+    }
+    setStartedEdit(false);
   };
+
+  // Move cursor to the end after every change
+  const moveCursorToEnd = () => {
+    if (inputRef.current) {
+      const length = inputRef.current.value.length;
+      inputRef.current.setSelectionRange(length, length); // Set the cursor at the end
+    }
+  };
+
+  // Update cursor position when the value changes
+  React.useEffect(() => {
+    if (startedEdit && inputRef.current) {
+      moveCursorToEnd();
+    }
+  }, [value, startedEdit]); // Only when value changes
 
   return (
     <div className="relative">
@@ -59,11 +62,12 @@ const PriceInput: React.FC<PriceInputProps> = ({
         $
       </span>
       <input
+        ref={inputRef}
         type="tel"
         value={value}
         onChange={handleChange}
-        onFocus={handleFocus} // Set editing state when the input is focused
-        onBlur={handleBlur} // Reset editing state when the input loses focus
+        onFocus={handleFocus}
+        onBlur={handleBlur}
         className={`w-full pl-4 pr-2 font-normal text-darkest bg-lightestgray placeholder-midgray rounded-xl py-2 ps-5 focus:outline-none ${className}`}
         placeholder="0.00"
       />

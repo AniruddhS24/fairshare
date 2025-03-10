@@ -160,14 +160,14 @@ export default function UploadReceiptPage() {
             label="Upload Photo"
             onClick={openFileInput}
             icon="fa-images"
-            className={`bg-primary py-3 px-6 rounded-full border border-2 border-primary text-white transition-colors duration-150 ease-in-out active:bg-primarydark`}
+            className={`bg-primary py-3 px-6 rounded-full border-2 border-primary text-white transition-colors duration-150 ease-in-out active:bg-primarydark`}
           />
           <Spacer size="medium" />
           <OptionButton
             label="Enter Manually"
             icon="fa-pen"
             onClick={handleCreateReceipt}
-            className={`bg-white py-3 px-6 rounded-full border border-2 border-primarylight text-primary transition-colors duration-150 ease-in-out active:bg-primarylight`}
+            className={`bg-white py-3 px-6 rounded-full border-2 border-primarylight text-primary transition-colors duration-150 ease-in-out active:bg-primarylight`}
           />
         </div>
       ) : (
