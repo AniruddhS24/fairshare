@@ -107,26 +107,68 @@ const DynamicSelection: React.FC<DynamicSelectionProps> = ({
   return (
     <div className="flex flex-col w-full">
       {Object.values(items).map((item) => {
-        const allSplits = [
-          ...Object.entries(splits),
-          ...Object.entries(pendingAdds),
-        ]
+        const allSplits: {
+          [key: string]: {
+            consumers: [string];
+            mine: boolean;
+            pending: boolean;
+          };
+        } = {};
+        Object.values(splits)
           .filter(
-            ([, split]) =>
-              split.item_id === item.id && !pendingDeletions[split.id]
+            (split) => split.item_id === item.id && !pendingDeletions[split.id]
           )
-          .reduce((acc, [, split]) => {
-            acc[split.split_id] = acc[split.split_id] || {
+          .forEach((split) => {
+            allSplits[split.split_id] = allSplits[split.split_id] || {
+              pending: false,
               consumers: [],
               mine: false,
             };
-            acc[split.split_id].consumers.push(
+            allSplits[split.split_id].consumers.push(
               users[split.user_id]?.name || "Unknown"
             );
-            acc[split.split_id].mine =
-              acc[split.split_id].mine || split.user_id == user?.id;
-            return acc;
-          }, {} as Record<string, { consumers: string[]; mine: boolean }>);
+            allSplits[split.split_id].mine ||= split.user_id == user?.id;
+          });
+
+        Object.values(pendingAdds)
+          .filter(
+            (split) => split.item_id === item.id && !pendingDeletions[split.id]
+          )
+          .forEach((split) => {
+            const split_id = split.split_id.replace(/^temp/, "");
+            if (!(split_id in allSplits)) {
+              allSplits[split.split_id] = allSplits[split.split_id] || {
+                pending: false,
+                consumers: [],
+                mine: false,
+              };
+              allSplits[split.split_id].consumers.push(
+                users[split.user_id]?.name || "Unknown"
+              );
+              allSplits[split.split_id].mine ||= split.user_id == user?.id;
+            }
+          });
+
+        // const allSplits = [
+        //   ...Object.entries(splits),
+        //   ...Object.entries(pendingAdds),
+        // ]
+        //   .filter(
+        //     ([, split]) =>
+        //       split.item_id === item.id && !pendingDeletions[split.id]
+        //   )
+        //   .reduce((acc, [, split]) => {
+        //     acc[split.split_id] = acc[split.split_id] || {
+        //       consumers: [],
+        //       mine: false,
+        //     };
+        //     acc[split.split_id].consumers.push(
+        //       users[split.user_id]?.name || "Unknown"
+        //     );
+        //     acc[split.split_id].mine =
+        //       acc[split.split_id].mine || split.user_id == user?.id;
+        //     return acc;
+        //   }, {} as Record<string, { consumers: string[]; mine: boolean }>);
 
         return (
           <div key={item.id} className="w-full mb-4">
@@ -134,12 +176,12 @@ const DynamicSelection: React.FC<DynamicSelectionProps> = ({
               <div className="flex items-center">
                 <Text type="body_bold" className="text-darkest">
                   {item.quantity}{" "}
-                  {item.name.length > 23
-                    ? `${item.name.substring(0, 23)}...`
+                  {item.name.length > 18
+                    ? `${item.name.substring(0, 18)}...`
                     : item.name}
                 </Text>
                 {Object.keys(allSplits).length < parseInt(item.quantity) ? (
-                  <div className="flex ms-2 px-2 text-error items-center bg-red-50 rounded-full">
+                  <div className="flex ms-1 px-2 text-error items-center bg-red-50 rounded-full">
                     <i
                       className={`fas fa-circle mr-1`}
                       style={{ fontSize: "8px" }}

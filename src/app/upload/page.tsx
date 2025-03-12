@@ -67,9 +67,9 @@ export default function UploadReceiptPage() {
     }
   };
 
-  // const openCamera = () => {
-  //   document.getElementById("cameraInput")?.click();
-  // };
+  const openCamera = () => {
+    document.getElementById("cameraInput")?.click();
+  };
 
   const openFileInput = () => {
     document.getElementById("fileInput")?.click();
@@ -138,7 +138,7 @@ export default function UploadReceiptPage() {
         alt="Uploaded Receipt"
         className="w-full border border-lightgray rounded-lg"
       />
-      <StickyButton label="Split Receipt" onClick={handleSplitReceipt} sticky />
+      <StickyButton label="Scan Items" onClick={handleSplitReceipt} sticky />
     </Container>
   ) : (
     <Container centered>
@@ -157,7 +157,14 @@ export default function UploadReceiptPage() {
       {!loading ? (
         <div className="absolute bottom-0 left-0 right-0 px-4 mb-6">
           <OptionButton
-            label="Upload Photo"
+            label="Take Photo"
+            onClick={openCamera}
+            icon="fa-camera"
+            className={`bg-primary py-3 px-6 rounded-full border-2 border-primary text-white transition-colors duration-150 ease-in-out active:bg-primarydark`}
+          />
+          <Spacer size="medium" />
+          <OptionButton
+            label="Upload Image"
             onClick={openFileInput}
             icon="fa-images"
             className={`bg-primary py-3 px-6 rounded-full border-2 border-primary text-white transition-colors duration-150 ease-in-out active:bg-primarydark`}

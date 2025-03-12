@@ -274,7 +274,7 @@ export default function LiveReceiptPage({
         all_success = false;
       }
     }
-    refreshSplits();
+    await refreshSplits();
     setPendingAdditions({});
     setPendingDeletions({});
     if (all_success) {
@@ -402,10 +402,16 @@ export default function LiveReceiptPage({
             label="Settle receipt to finalize payments!"
             icon="fa-check"
             type="success"
+            disappear={false}
           />
         ) : null}
         {banner ? (
-          <Banner label={banner.label} icon={banner.icon} type={banner.type} />
+          <Banner
+            label={banner.label}
+            icon={banner.icon}
+            type={banner.type}
+            disappear={true}
+          />
         ) : null}
         <div className="flex items-center">
           <Text type="xl_heading" className="text-darkest">
