@@ -11,8 +11,8 @@ import Container from "@/components/Container";
 import { useRouter } from "next/navigation";
 import {
   useGlobalContext,
-  Permission,
   AuthStatus,
+  Permission,
 } from "@/contexts/GlobalContext";
 import { backend, createEmptyReceipt, getUploadLink } from "@/lib/backend";
 import Spinner from "@/components/Spinner";
@@ -42,7 +42,7 @@ const OptionButton: React.FC<OptionButtonProps> = ({
 };
 
 export default function UploadReceiptPage() {
-  const { status } = useGlobalContext();
+  const { status, setReceipt, setRole } = useGlobalContext();
   const router = useRouter();
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -83,9 +83,8 @@ export default function UploadReceiptPage() {
   const handleCreateReceipt = async () => {
     setLoading(true);
     const receipt = await createEmptyReceipt();
-    await backend("POST", `/receipt/${receipt.id}/role`, {
-      role: Permission.HOST,
-    });
+    setReceipt(receipt);
+    setRole(Permission.HOST);
     router.push(`/${receipt.id}/editreceipt`);
   };
 
@@ -113,10 +112,11 @@ export default function UploadReceiptPage() {
       console.log("File upload failure");
     } else {
       const key = fields.key;
+      setRole(Permission.HOST);
       await backend("POST", "/ocr", { key });
-      await backend("POST", `/receipt/${key}/role`, {
-        role: Permission.HOST,
-      });
+      // await backend("POST", `/receipt/${key}/role`, {
+      //   role: Permission.HOST,
+      // });
       router.push(`/${key}/editreceipt`);
     }
   };

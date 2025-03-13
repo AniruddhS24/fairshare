@@ -49,11 +49,12 @@ const PaymentBreakdown: React.FC<PaymentBreakdownProps> = ({
         let name = items[split.item_id].name;
         if (split_counts[split_key] > 1)
           name += " / " + split_counts[split_key].toString();
+        const unit_price =
+          parseFloat(items[split.item_id].price) /
+          parseFloat(items[split.item_id].quantity);
         my_items[split_key] = {
           name: name,
-          price: (
-            parseFloat(items[split.item_id].price) / split_counts[split_key]
-          ).toFixed(2),
+          price: (unit_price / split_counts[split_key]).toFixed(2),
         };
       }
     }

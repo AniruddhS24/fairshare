@@ -8,7 +8,12 @@ import React, {
   useEffect,
 } from "react";
 
-import { createJWTToken, getUserFromJWT, getUserRole } from "@/lib/backend";
+import {
+  createJWTToken,
+  getUserFromJWT,
+  getUserRole,
+  Receipt,
+} from "@/lib/backend";
 
 interface User {
   id: string | null;
@@ -36,6 +41,10 @@ interface GlobalContextType {
   login: (userData: User) => void;
   logout: () => void;
   getPermission: (receiptId: string) => Promise<Permission>;
+  role: Permission | null;
+  setRole: React.Dispatch<React.SetStateAction<Permission | null>>;
+  receipt: Receipt | null;
+  setReceipt: React.Dispatch<React.SetStateAction<Receipt | null>>;
 }
 
 const GlobalContext = createContext<GlobalContextType | undefined>(undefined);
@@ -51,6 +60,8 @@ export const useGlobalContext = () => {
 export const GlobalProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [status, setStatus] = useState<AuthStatus>(AuthStatus.CHECKING);
+  const [receipt, setReceipt] = useState<Receipt | null>(null);
+  const [role, setRole] = useState<Permission | null>(null);
 
   const readJWT = () => {
     const jwt = localStorage.getItem("jwt");
@@ -81,18 +92,23 @@ export const GlobalProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const getPermission = async (receiptId: string): Promise<Permission> => {
+    if (role) return role;
     try {
       const role = await getUserRole(receiptId);
       const permission = role.role;
       if (permission === "host") {
+        setRole(Permission.HOST);
         return Permission.HOST;
       } else if (permission === "consumer") {
+        setRole(Permission.CONSUMER);
         return Permission.CONSUMER;
       } else {
+        setRole(Permission.UNAUTHORIZED);
         return Permission.UNAUTHORIZED;
       }
     } catch (error) {
       console.error("There was a problem retrieving permissions:", error);
+      setRole(Permission.UNAUTHORIZED);
       return Permission.UNAUTHORIZED;
     }
   };
@@ -120,6 +136,10 @@ export const GlobalProvider = ({ children }: { children: ReactNode }) => {
         login,
         logout,
         getPermission,
+        receipt,
+        setReceipt,
+        role,
+        setRole,
       }}
     >
       {children}

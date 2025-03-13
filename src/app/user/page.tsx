@@ -183,7 +183,7 @@ function UserOnboardingPage() {
     //   await createOTP(phoneNumber);
     //   setWaitingForCode(true);
     // }
-    await createOTP(phoneNumber);
+    createOTP(phoneNumber);
     setWaitingForCode(true);
   };
 

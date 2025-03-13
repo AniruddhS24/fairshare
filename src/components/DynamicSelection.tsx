@@ -202,7 +202,7 @@ const DynamicSelection: React.FC<DynamicSelectionProps> = ({
                 )}
               </div>
               <Text type="body" className="text-midgray">
-                ${(parseFloat(item.price) * parseInt(item.quantity)).toFixed(2)}
+                ${item.price}
               </Text>
             </div>
             <div className="flex flex-wrap mt-2 gap-2">

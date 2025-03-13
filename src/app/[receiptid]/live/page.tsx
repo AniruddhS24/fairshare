@@ -24,7 +24,6 @@ import {
   Item,
   User,
   Split,
-  Receipt,
   getItems,
   getParticipants,
   getSplits,
@@ -64,17 +63,18 @@ export default function LiveReceiptPage({
 }: {
   params: { receiptid: string };
 }) {
-  const { user, status, getPermission } = useGlobalContext();
+  const { user, status, getPermission, receipt, setReceipt } =
+    useGlobalContext();
   const [loading, setLoading] = useState(true);
-  const [receipt, setReceipt] = useState<Receipt>({
-    id: "",
-    image_url: "",
-    shared_cost: "0.00",
-    grand_total: "0.00",
-    settled: false,
-    addl_gratuity: "0.00",
-    item_counter: 0,
-  });
+  // const [receipt, setReceipt] = useState<Receipt>({
+  //   id: "",
+  //   image_url: "",
+  //   shared_cost: "0.00",
+  //   grand_total: "0.00",
+  //   settled: false,
+  //   addl_gratuity: "0.00",
+  //   item_counter: 0,
+  // });
   const [receiptItems, setReceiptItems] = useState<{ [key: string]: Item }>({});
   const [users, setUsers] = useState<{ [key: string]: User }>({});
   const [splits, setSplits] = useState<{ [key: string]: Split }>({});
@@ -117,15 +117,15 @@ export default function LiveReceiptPage({
   };
 
   const fetchData = async () => {
-    const [receipt, receipt_items, receipt_splits, users] = await Promise.all([
-      getReceipt(params.receiptid),
+    const [_receipt, receipt_items, receipt_splits, users] = await Promise.all([
+      receipt || getReceipt(params.receiptid),
       getItems(params.receiptid),
       getSplits(params.receiptid),
       getParticipants(params.receiptid),
     ]);
 
-    setReceipt(receipt);
-    setIsSettled(receipt.settled);
+    setReceipt(_receipt);
+    setIsSettled(_receipt.settled);
 
     const receipt_items_map = receipt_items.reduce((acc, item) => {
       acc[item.id] = item;
@@ -133,24 +133,24 @@ export default function LiveReceiptPage({
     }, {} as { [key: string]: Item });
     setReceiptItems(receipt_items_map);
 
-    const user_map = [...users.hosts, ...users.consumers].reduce(
-      (acc, user) => {
-        acc[user.id] = user;
-        return acc;
-      },
-      {} as { [key: string]: User }
-    );
-    setUsers(user_map);
-
     const split_map = receipt_splits.reduce((acc, item) => {
       acc[item.id] = item;
       return acc;
     }, {} as { [key: string]: Split });
     setSplits(split_map);
 
+    const unique_users = new Set(receipt_splits.map((split) => split.user_id));
+    const user_map = [...users.hosts, ...users.consumers]
+      .filter((user) => unique_users.has(user.id))
+      .reduce((acc, user) => {
+        acc[user.id] = user;
+        return acc;
+      }, {} as { [key: string]: User });
+    setUsers(user_map);
+
     const userCount = Object.keys(user_map).length || 1;
     setSharedCharges(
-      (parseFloat(receipt.shared_cost) + parseFloat(receipt.addl_gratuity)) /
+      (parseFloat(_receipt.shared_cost) + parseFloat(_receipt.addl_gratuity)) /
         userCount
     );
 
@@ -191,6 +191,18 @@ export default function LiveReceiptPage({
     ...Object.values(splits),
     ...Object.values(pendingAdditions),
   ].filter((split) => !pendingDeletions[split.id]);
+
+  const currentTotal = () => {
+    const item_split_map: { [key: string]: number } = {};
+    for (const split of mergedSplits)
+      item_split_map[`${split.item_id}_${split.split_id}`] =
+        parseFloat(receiptItems[split.item_id].price) /
+        parseFloat(receiptItems[split.item_id].quantity);
+    return Object.values(item_split_map).reduce(
+      (total, price) => total + price,
+      0
+    );
+  };
 
   useEffect(() => {
     setLoading(true);
@@ -498,32 +510,40 @@ export default function LiveReceiptPage({
                 }}
               ></DynamicSelection>
               <LineItem
+                label="Claimed Amount"
+                price={currentTotal()}
+                labelColor="text-accent"
+                bold
+              ></LineItem>
+              <LineItem
                 label="Subtotal"
                 price={
-                  parseFloat(receipt.grand_total) -
-                  parseFloat(receipt.shared_cost) -
-                  parseFloat(receipt.addl_gratuity)
+                  receipt
+                    ? parseFloat(receipt.grand_total) -
+                      parseFloat(receipt.shared_cost) -
+                      parseFloat(receipt.addl_gratuity)
+                    : 0
                 }
                 labelColor="text-midgray"
                 bold
               ></LineItem>
               <LineItem
                 label="Tax + Other Fees"
-                price={parseFloat(receipt.shared_cost)}
+                price={receipt ? parseFloat(receipt.shared_cost) : 0}
                 labelColor="text-midgray"
                 bold
               ></LineItem>
-              {parseFloat(receipt.addl_gratuity) != 0 ? (
+              {parseFloat(receipt ? receipt.addl_gratuity : "0") != 0 ? (
                 <LineItem
                   label="Tip"
-                  price={parseFloat(receipt.addl_gratuity)}
+                  price={receipt ? parseFloat(receipt.addl_gratuity) : 0}
                   labelColor="text-midgray"
                   bold
                 ></LineItem>
               ) : null}
               <LineItem
                 label="Grand Total"
-                price={parseFloat(receipt.grand_total)}
+                price={receipt ? parseFloat(receipt.grand_total) : 0}
                 labelColor="text-primary"
                 bold
               ></LineItem>
@@ -573,17 +593,37 @@ export default function LiveReceiptPage({
                 />
               ))}
               <LineItem
+                label="Claimed Amount"
+                price={currentTotal()}
+                labelColor="text-accent"
+                bold
+              ></LineItem>
+              <LineItem
+                label="Subtotal"
+                price={
+                  receipt
+                    ? parseFloat(receipt.grand_total) -
+                      parseFloat(receipt.shared_cost) -
+                      parseFloat(receipt.addl_gratuity)
+                    : 0
+                }
+                labelColor="text-midgray"
+                bold
+              ></LineItem>
+              <LineItem
                 label="Shared Charges"
                 price={
-                  parseFloat(receipt.shared_cost) +
-                  parseFloat(receipt.addl_gratuity)
+                  receipt
+                    ? parseFloat(receipt.shared_cost) +
+                      parseFloat(receipt.addl_gratuity)
+                    : 0
                 }
                 labelColor="text-midgray"
                 bold
               ></LineItem>
               <LineItem
                 label="Grand Total"
-                price={parseFloat(receipt.grand_total)}
+                price={receipt ? parseFloat(receipt.grand_total) : 0}
                 labelColor="text-primary"
                 bold
               ></LineItem>

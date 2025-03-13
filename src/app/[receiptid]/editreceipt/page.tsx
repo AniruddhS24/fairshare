@@ -43,7 +43,7 @@ export default function EditReceiptPage({
 }: {
   params: { receiptid: string };
 }) {
-  const { status, getPermission } = useGlobalContext();
+  const { status, getPermission, receipt, setReceipt } = useGlobalContext();
   const [loading, setLoading] = useState(true);
   const [receiptItems, setReceiptItems] = useState<EditItemProps[]>([]);
   const [sharedCharges, setSharedCharges] = useState({
@@ -75,15 +75,15 @@ export default function EditReceiptPage({
       router.push(`/user`);
     } else if (status === AuthStatus.AUTHORIZED) {
       getPermission(receipt_id).then((permission) => {
-        if (permission === Permission.UNAUTHORIZED) {
+        if (permission !== Permission.HOST) {
           router.push(`/unauthorized`);
         }
       });
     }
 
     const fetchData = async () => {
-      const receipt = await getReceipt(receipt_id);
-      if (receipt.settled) {
+      const _receipt = receipt || (await getReceipt(receipt_id));
+      if (_receipt.settled) {
         router.push(`/${receipt_id}/live`);
       }
 
@@ -92,28 +92,26 @@ export default function EditReceiptPage({
       const receipt_items = await getItems(receipt_id);
       let total = 0;
       for (const item of receipt_items) {
-        const all_qty_price =
-          safeParseFloat(item.price) * parseInt(item.quantity);
         items.push({
           id: item.id,
           index: ct,
           name: item.name,
           quantity: item.quantity,
-          price: all_qty_price.toFixed(2),
+          price: item.price,
           edited: false,
           deleted: false,
         });
         ct++;
-        total += all_qty_price;
+        total += safeParseFloat(item.price);
       }
       setCounter(ct);
       if (items.length == 0) addItem();
       else setReceiptItems(items);
 
-      setSharedCharges({ value: receipt.shared_cost, edited: false });
-      setAdditionalGratuity({ value: receipt.addl_gratuity, edited: false });
+      setSharedCharges({ value: _receipt.shared_cost, edited: false });
+      setAdditionalGratuity({ value: _receipt.addl_gratuity, edited: false });
       const newPct = (
-        (safeParseFloat(receipt.addl_gratuity) / (total == 0 ? 1 : total)) *
+        (safeParseFloat(_receipt.addl_gratuity) / (total == 0 ? 1 : total)) *
         100
       ).toFixed(0);
       setAdditionalGratuityPct({
@@ -211,32 +209,42 @@ export default function EditReceiptPage({
         promises.push(deleteItem(receipt_id, item.id));
       } else if (item.id && item.edited) {
         receipt_changed = true;
-        const per_item_price =
-          safeParseFloat(item.price) / parseInt(item.quantity);
         promises.push(
           updateItem(
             receipt_id,
             item.id,
             item.name,
             item.quantity,
-            per_item_price.toFixed(2)
+            safeParseFloat(item.price).toFixed(2)
           )
         );
       } else if (!item.id && !item.deleted) {
         receipt_changed = true;
-        const per_item_price =
-          safeParseFloat(item.price) / parseInt(item.quantity);
         promises.push(
           createItem(
             receipt_id,
             item.name,
             item.quantity,
-            per_item_price.toFixed(2)
+            safeParseFloat(item.price).toFixed(2)
           )
         );
       }
     }
     if (receipt_changed) {
+      setReceipt((prevReceipt) => {
+        const prev = prevReceipt || {
+          id: receipt_id,
+          image_url: "",
+          settled: false,
+          item_counter: receiptItems.length,
+        };
+        return {
+          ...prev,
+          addl_gratuity: additionalGratuity.value,
+          shared_cost: sharedCharges.value,
+          grand_total: calculateTotal().toFixed(2),
+        };
+      });
       promises.push(
         backend("PUT", `/receipt/${receipt_id}`, {
           addl_gratuity: additionalGratuity.value,
