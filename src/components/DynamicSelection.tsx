@@ -69,6 +69,9 @@ const DynamicSelection: React.FC<DynamicSelectionProps> = ({
     const user_id = user.id;
     const key = `${itemId}_${splitId}_${user_id}`;
 
+    // console.log(key);
+    // console.log(pendingAdds);
+    // console.log(pendingDeletions);
     if (key in pendingAdds) {
       setPendingAdditions((prev) => {
         const updated = { ...prev };
@@ -142,11 +145,11 @@ const DynamicSelection: React.FC<DynamicSelectionProps> = ({
                 consumers: [],
                 mine: false,
               };
-              allSplits[split.split_id].consumers.push(
-                users[split.user_id]?.name || "Unknown"
-              );
-              allSplits[split.split_id].mine ||= split.user_id == user?.id;
             }
+            allSplits[split.split_id].consumers.push(
+              users[split.user_id]?.name || "Unknown"
+            );
+            allSplits[split.split_id].mine ||= split.user_id == user?.id;
           });
 
         // const allSplits = [

@@ -21,6 +21,7 @@ export async function backend<T>(
     });
     if (!response.ok) {
       const errorData = await response.json();
+      console.log(errorData);
       throw new Error(errorData.error || "Request failed");
     }
     const response_body = await response.json();

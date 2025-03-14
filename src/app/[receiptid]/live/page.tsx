@@ -101,19 +101,44 @@ export default function LiveReceiptPage({
   const [myTotal, setMyTotal] = useState<number>(0.0);
 
   const [banner, setBanner] = useState<BannerProps | null>(null);
+  const [isEditing, setIsEditing] = useState<boolean>(false);
 
   const router = useRouter();
   const [wsUrl, setWsUrl] = useState<string>(
     "wss://epccxqhta9.execute-api.us-east-1.amazonaws.com/prod"
   );
 
-  const refreshSplits = async () => {
-    const split_map: { [key: string]: Split } = {};
-    const splits = await getSplits(params.receiptid);
-    for (const split of splits) {
-      split_map[split.id] = split;
-    }
-    setSplits(split_map);
+  // const refreshSplits = async () => {
+  //   const split_map: { [key: string]: Split } = {};
+  //   const splits = await getSplits(params.receiptid);
+  //   for (const split of splits) {
+  //     split_map[split.id] = split;
+  //   }
+  //   setSplits(split_map);
+  // };
+
+  // const removeFromPending = (id: string, type: "add" | "delete") => {
+  //   const tempId = id.replace(/_(\d+)_/, "_temp$1_");
+  //   if (type === "add") {
+  //     setPendingAdditions((prev) => {
+  //       const newAdds = { ...prev };
+  //       if (tempId in newAdds) delete newAdds[tempId];
+  //       if (id in newAdds) delete newAdds[id];
+  //       return newAdds;
+  //     });
+  //   } else {
+  //     setPendingDeletions((prev) => {
+  //       const newAdds = { ...prev };
+  //       if (tempId in newAdds) delete newAdds[tempId];
+  //       if (id in newAdds) delete newAdds[id];
+  //       return newAdds;
+  //     });
+  //   }
+  // };
+
+  const cleanKey = (key: string) => {
+    const parts = key.split("_");
+    return `${parts[0]}_${parts[1].replace("temp", "")}_${parts[2]}`;
   };
 
   const fetchData = async () => {
@@ -123,7 +148,6 @@ export default function LiveReceiptPage({
       getSplits(params.receiptid),
       getParticipants(params.receiptid),
     ]);
-
     setReceipt(_receipt);
     setIsSettled(_receipt.settled);
 
@@ -139,16 +163,34 @@ export default function LiveReceiptPage({
     }, {} as { [key: string]: Split });
     setSplits(split_map);
 
-    const unique_users = new Set(receipt_splits.map((split) => split.user_id));
-    const user_map = [...users.hosts, ...users.consumers]
-      .filter((user) => unique_users.has(user.id))
-      .reduce((acc, user) => {
+    setPendingAdditions((prev) => {
+      const newAdds = { ...prev };
+      for (const key in newAdds) {
+        if (cleanKey(key) in split_map) delete newAdds[key];
+      }
+      return newAdds;
+    });
+
+    setPendingDeletions((prev) => {
+      const newDeletions = { ...prev };
+      for (const key in newDeletions) {
+        if (!(cleanKey(key) in split_map)) delete newDeletions[key];
+      }
+      return newDeletions;
+    });
+
+    const user_map = [...users.hosts, ...users.consumers].reduce(
+      (acc, user) => {
         acc[user.id] = user;
         return acc;
-      }, {} as { [key: string]: User });
+      },
+      {} as { [key: string]: User }
+    );
     setUsers(user_map);
 
-    const userCount = Object.keys(user_map).length || 1;
+    const unique_users = new Set(receipt_splits.map((split) => split.user_id));
+    const userCount = unique_users.size;
+
     setSharedCharges(
       (parseFloat(_receipt.shared_cost) + parseFloat(_receipt.addl_gratuity)) /
         userCount
@@ -258,50 +300,48 @@ export default function LiveReceiptPage({
   };
 
   const saveEdits = async () => {
-    const promises = [];
-    let all_success = true;
-    for (const key in pendingDeletions) {
-      promises.push(deleteSplit(params.receiptid, key));
-    }
-    for (const promise of promises) {
+    // const promises = [];
+    // let all_success = true;
+    const addsToProcess = pendingAdditions;
+    const deletesToProcess = pendingDeletions;
+
+    Object.keys(deletesToProcess).forEach(async (id) => {
       try {
-        await promise;
-      } catch {
-        all_success = false;
+        await deleteSplit(params.receiptid, id);
+      } catch (error) {
+        console.error("Failed to delete:", id, error);
+        setPendingDeletions((prev) => {
+          const newDeletes = { ...prev };
+          for (const key in prev) if (key === id) delete newDeletes[key];
+          return newDeletes;
+        });
+        setBanner({
+          label: "Could not delete some splits, please check!",
+          icon: "fa-xmark",
+          type: "error",
+        });
       }
-    }
-    for (const key in pendingAdditions) {
-      promises.push(
-        createSplit(
-          params.receiptid,
-          pendingAdditions[key].item_id,
-          pendingAdditions[key].split_id
-        )
-      );
-    }
-    for (const promise of promises) {
+    });
+
+    Object.values(addsToProcess).forEach(async (item) => {
       try {
-        await promise;
-      } catch {
-        all_success = false;
+        await createSplit(params.receiptid, item.item_id, item.split_id);
+      } catch (error) {
+        console.error("Failed to add:", item.id, error);
+        setPendingAdditions((prev) => {
+          const newAdds = { ...prev };
+          for (const key in prev) if (key === item.id) delete newAdds[key];
+          return newAdds;
+        });
+        setBanner({
+          label: "Could not add some splits, please check!",
+          icon: "fa-xmark",
+          type: "error",
+        });
       }
-    }
-    await refreshSplits();
-    setPendingAdditions({});
-    setPendingDeletions({});
-    if (all_success) {
-      setBanner({
-        label: "Successfully saved changes!",
-        icon: "fa-check",
-        type: "success",
-      });
-    } else {
-      setBanner({
-        label: "Could not add some splits, please check!",
-        icon: "fa-xmark",
-        type: "error",
-      });
-    }
+    });
+
+    setIsEditing(false);
   };
 
   const markSettled = async () => {
@@ -309,7 +349,7 @@ export default function LiveReceiptPage({
     setIsSettledPopupVisible(false);
     setIsSettled(true);
     await markAsSettled(params.receiptid);
-    await backend("GET", `/receipt/${params.receiptid}/refresh`);
+    await backend("GET", `/receipt/${params.receiptid}/broadcast`);
   };
 
   const sendToVenmo = () => {
@@ -507,14 +547,17 @@ export default function LiveReceiptPage({
                 disabled={isSettled}
                 onSplitChange={() => {
                   setBanner(null);
+                  setIsEditing(true);
                 }}
               ></DynamicSelection>
-              <LineItem
-                label="Claimed Amount"
-                price={currentTotal()}
-                labelColor="text-accent"
-                bold
-              ></LineItem>
+              {isHost ? (
+                <LineItem
+                  label="Claimed Amount"
+                  price={currentTotal()}
+                  labelColor="text-accent"
+                  bold
+                ></LineItem>
+              ) : null}
               <LineItem
                 label="Subtotal"
                 price={
@@ -547,8 +590,7 @@ export default function LiveReceiptPage({
                 labelColor="text-primary"
                 bold
               ></LineItem>
-              {Object.keys(pendingAdditions).length > 0 ||
-              Object.keys(pendingDeletions).length > 0 ? (
+              {isEditing ? (
                 <StickyButton
                   label="Save changes"
                   icon="fa-floppy-disk"
@@ -592,12 +634,14 @@ export default function LiveReceiptPage({
                   handleReminder={handleReminder}
                 />
               ))}
-              <LineItem
-                label="Claimed Amount"
-                price={currentTotal()}
-                labelColor="text-accent"
-                bold
-              ></LineItem>
+              {isHost ? (
+                <LineItem
+                  label="Claimed Amount"
+                  price={currentTotal()}
+                  labelColor="text-accent"
+                  bold
+                ></LineItem>
+              ) : null}
               <LineItem
                 label="Subtotal"
                 price={
