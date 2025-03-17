@@ -19,7 +19,7 @@ export default function ShareReceiptPage({
 }: {
   params: { receiptid: string };
 }) {
-  const { status, getPermission } = useGlobalContext();
+  const { status, getRole } = useGlobalContext();
   const router = useRouter();
   const receipt_id = params.receiptid;
   const [loading, setLoading] = useState(true);
@@ -34,8 +34,8 @@ export default function ShareReceiptPage({
     } else if (status === AuthStatus.BAD_TOKEN) {
       router.push(`/user`);
     } else if (status === AuthStatus.AUTHORIZED) {
-      getPermission(receipt_id).then((permission) => {
-        if (permission === Permission.HOST) {
+      getRole(receipt_id).then((role) => {
+        if (role.permission === Permission.HOST) {
           setLoading(false);
         } else {
           router.push(`/unauthorized`);

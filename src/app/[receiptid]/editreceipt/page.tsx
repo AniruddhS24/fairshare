@@ -36,6 +36,7 @@ interface EditItemProps {
   price: string;
   edited: boolean;
   deleted: boolean;
+  checked: boolean;
 }
 
 export default function EditReceiptPage({
@@ -43,7 +44,7 @@ export default function EditReceiptPage({
 }: {
   params: { receiptid: string };
 }) {
-  const { status, getPermission, receipt, setReceipt } = useGlobalContext();
+  const { status, getRole, receipt, setReceipt } = useGlobalContext();
   const [loading, setLoading] = useState(true);
   const [receiptItems, setReceiptItems] = useState<EditItemProps[]>([]);
   const [sharedCharges, setSharedCharges] = useState({
@@ -59,8 +60,14 @@ export default function EditReceiptPage({
     edited: false,
   });
   const [currentSubTotal, setCurrentSubTotal] = useState(0);
-
   const [counter, setCounter] = useState(0);
+
+  const [splitDetailsStep, setSplitDetailsStep] = useState<boolean>(false);
+  const [numConsumers, setNumConsumers] = useState({
+    value: 1,
+    edited: false,
+  });
+
   const receipt_id = params.receiptid;
   const router = useRouter();
 
@@ -74,8 +81,8 @@ export default function EditReceiptPage({
     } else if (status === AuthStatus.BAD_TOKEN) {
       router.push(`/user`);
     } else if (status === AuthStatus.AUTHORIZED) {
-      getPermission(receipt_id).then((permission) => {
-        if (permission !== Permission.HOST) {
+      getRole(receipt_id).then((role) => {
+        if (role.permission !== Permission.HOST) {
           router.push(`/unauthorized`);
         }
       });
@@ -100,6 +107,7 @@ export default function EditReceiptPage({
           price: item.price,
           edited: false,
           deleted: false,
+          checked: item.global_split,
         });
         ct++;
         total += safeParseFloat(item.price);
@@ -110,6 +118,7 @@ export default function EditReceiptPage({
 
       setSharedCharges({ value: _receipt.shared_cost, edited: false });
       setAdditionalGratuity({ value: _receipt.addl_gratuity, edited: false });
+      setNumConsumers({ value: _receipt.consumers, edited: false });
       const newPct = (
         (safeParseFloat(_receipt.addl_gratuity) / (total == 0 ? 1 : total)) *
         100
@@ -154,7 +163,11 @@ export default function EditReceiptPage({
       const newReceiptItems = [...receiptItems];
       if (field === "index") {
         newReceiptItems[index][field] = value as number;
-      } else if (field === "edited" || field === "deleted") {
+      } else if (
+        field === "edited" ||
+        field === "deleted" ||
+        field === "checked"
+      ) {
         newReceiptItems[index][field] = Boolean(value);
       } else {
         newReceiptItems[index][field] = value.toString();
@@ -182,6 +195,7 @@ export default function EditReceiptPage({
       price: "0",
       edited: false,
       deleted: false,
+      checked: false,
     });
     setCounter(counter + 1);
     setReceiptItems(newReceiptItems);
@@ -201,7 +215,8 @@ export default function EditReceiptPage({
 
   const handleSaveEdits = async () => {
     const data = receiptItems;
-    let receipt_changed = sharedCharges.edited || additionalGratuity.edited;
+    let receipt_changed =
+      sharedCharges.edited || additionalGratuity.edited || numConsumers.edited;
     const promises = [];
     for (const item of data) {
       if (item.id && item.deleted) {
@@ -215,7 +230,8 @@ export default function EditReceiptPage({
             item.id,
             item.name,
             item.quantity,
-            safeParseFloat(item.price).toFixed(2)
+            safeParseFloat(item.price).toFixed(2),
+            item.checked
           )
         );
       } else if (!item.id && !item.deleted) {
@@ -225,7 +241,8 @@ export default function EditReceiptPage({
             receipt_id,
             item.name,
             item.quantity,
-            safeParseFloat(item.price).toFixed(2)
+            safeParseFloat(item.price).toFixed(2),
+            item.checked
           )
         );
       }
@@ -243,10 +260,12 @@ export default function EditReceiptPage({
           addl_gratuity: additionalGratuity.value,
           shared_cost: sharedCharges.value,
           grand_total: calculateTotal().toFixed(2),
+          consumers: numConsumers.value,
         };
       });
       promises.push(
         backend("PUT", `/receipt/${receipt_id}`, {
+          consumers: numConsumers.value,
           addl_gratuity: additionalGratuity.value,
           shared_cost: sharedCharges.value,
           grand_total: calculateTotal().toFixed(2),
@@ -263,7 +282,87 @@ export default function EditReceiptPage({
     router.push(`/${receipt_id}/live`);
   };
 
-  return (
+  return splitDetailsStep ? (
+    <Container>
+      <LogoutSection></LogoutSection>
+      <Text type="xl_heading" className="text-darkest">
+        Split Details
+      </Text>
+      <Spacer size="large" />
+      <Text type="body" className="text-midgray">
+        <b>How many people</b> are splitting this receipt, including you?
+      </Text>
+      <Spacer size="small" />
+      <div className="flex items-center w-full justify-between">
+        <button
+          className="w-10 h-10 rounded-full bg-white border-2 border-lightestgray flex items-center justify-center font-bold
+                 text-primary transition-transform duration-150 active:scale-90 active:bg-lightgray"
+          onClick={() => {
+            setNumConsumers({ value: numConsumers.value - 1, edited: true });
+          }}
+          disabled={numConsumers.value <= 1}
+        >
+          <i className="fas fa-minus"></i>
+        </button>
+        <input
+          type="number"
+          value={numConsumers.value}
+          readOnly
+          className="flex-grow mx-2 font-normal text-darkest bg-lightestgray placeholder-midgray rounded-xl p-2 text-center focus:outline-none focus:border-transparent"
+        />
+        <button
+          className="w-10 h-10 rounded-full bg-white border-2 border-lightestgray flex items-center justify-center font-bold
+                 text-primary transition-transform duration-150 active:scale-90 active:bg-lightgray"
+          onClick={() => {
+            setNumConsumers({ value: numConsumers.value + 1, edited: true });
+          }}
+        >
+          <i className="fas fa-plus"></i>
+        </button>
+      </div>
+      <Spacer size="small" />
+      <Text type="body" className="text-midgray">
+        Were any items split <b>evenly amongst everyone</b>?
+      </Text>
+      <Spacer size="small" />
+      <div className="w-full">
+        <div className="grid grid-cols-8 w-full">
+          {receiptItems.map((item, index) => (
+            <div
+              className={`col-span-8 grid grid-cols-8 items-center py-3 -mx-4 ${
+                receiptItems[index].checked ? "bg-accentlight" : ""
+              }`}
+              key={index}
+              onClick={() =>
+                setReceiptItems((prev) =>
+                  prev.map((item, i) =>
+                    i === index
+                      ? { ...item, checked: !item.checked, edited: true }
+                      : item
+                  )
+                )
+              }
+            >
+              <div className="col-span-1 flex justify-center items-center ">
+                <input
+                  type="checkbox"
+                  checked={receiptItems[index].checked}
+                  onChange={(e) => e.stopPropagation()} // Prevent row click when clicking on checkbox
+                  className="w-4 h-4 accent-primary"
+                />
+              </div>
+              <div className="col-span-7 flex justify-start items-center">
+                <Text type="body_semi" className="text-darkest">
+                  {item.name}
+                </Text>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <StickyButton label="Next" onClick={handleSaveEdits} sticky />
+    </Container>
+  ) : (
     <Container>
       <LogoutSection></LogoutSection>
       <Text type="xl_heading" className="text-darkest">
@@ -339,7 +438,7 @@ export default function EditReceiptPage({
           <div className="col-span-12 grid grid-cols-12 items-center gap-2">
             <div className="col-span-9 flex justify-start items-center">
               <Text type="body_semi" className="text-darkest">
-                Tax + Other Fees
+                Tax + Fees
               </Text>
             </div>
             <div className="col-span-3 flex justify-center items-center">
@@ -412,7 +511,11 @@ export default function EditReceiptPage({
             bold
           />
           <Spacer size="large" />
-          <StickyButton label="Next" onClick={handleSaveEdits} sticky />
+          <StickyButton
+            label="Next"
+            onClick={() => setSplitDetailsStep(true)}
+            sticky
+          />
         </div>
       ) : (
         <div className="flex w-full items-center justify-center">

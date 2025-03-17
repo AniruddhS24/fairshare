@@ -1,72 +1,22 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import Text from "@/components/Text";
 import LineItem from "@/components/LineItem";
-import { Item, Split } from "@/lib/backend";
 
 interface PaymentBreakdownProps {
-  items: { [key: string]: Item };
-  splits: Split[];
-  user_id: string;
-  sharedCharges: string | null;
-  total: number;
-  setTotal: React.Dispatch<React.SetStateAction<number>>;
-  isSettled: boolean;
+  consumer_items: { [key: string]: { name: string; price: string } };
+  sharedCharges: number;
 }
 
-interface MyItem {
-  name: string;
-  price: string;
-}
 const PaymentBreakdown: React.FC<PaymentBreakdownProps> = ({
-  items,
-  splits,
-  user_id,
+  consumer_items,
   sharedCharges,
-  total,
-  setTotal,
-  isSettled,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [myItems, setMyItems] = useState<{ [key: string]: MyItem }>({});
 
-  useEffect(() => {
-    const split_counts: { [key: string]: number } = {};
-    const my_items: { [key: string]: MyItem } = {};
-
-    for (const split of splits) {
-      const split_key = `${split.item_id}_${split.split_id}`;
-      if (split_key in split_counts) {
-        split_counts[split_key] += 1;
-      } else {
-        split_counts[split_key] = 1;
-      }
-    }
-    for (const split of splits) {
-      if (!(split.item_id in items)) continue;
-      const split_key = `${split.item_id}_${split.split_id}`;
-      if (split.user_id == user_id) {
-        let name = items[split.item_id].name;
-        if (split_counts[split_key] > 1)
-          name += " / " + split_counts[split_key].toString();
-        const unit_price =
-          parseFloat(items[split.item_id].price) /
-          parseFloat(items[split.item_id].quantity);
-        my_items[split_key] = {
-          name: name,
-          price: (unit_price / split_counts[split_key]).toFixed(2),
-        };
-      }
-    }
-
-    let total = 0;
-    for (const item of Object.values(my_items)) {
-      total += parseFloat(item.price);
-    }
-    if (sharedCharges) total += parseFloat(sharedCharges);
-    setTotal(total);
-    setMyItems(my_items);
-  }, [items, splits, sharedCharges]);
+  const total = Object.values(consumer_items).reduce((sum, item) => {
+    return sum + parseFloat(item.price);
+  }, sharedCharges);
 
   return (
     <div className="w-full max-w-md mx-auto shadow-[0px_0px_6px_0px_rgba(0,0,0,0.10)] rounded-lg overflow-hidden">
@@ -92,7 +42,7 @@ const PaymentBreakdown: React.FC<PaymentBreakdownProps> = ({
           isOpen ? "opacity-100" : "max-h-0 opacity-0"
         } overflow-hidden bg-white`}
       >
-        {Object.values(myItems).map((item, index) => (
+        {Object.values(consumer_items).map((item, index) => (
           <div key={index} className="flex justify-between">
             <LineItem
               label={item.name}
@@ -101,16 +51,12 @@ const PaymentBreakdown: React.FC<PaymentBreakdownProps> = ({
             ></LineItem>
           </div>
         ))}
-        {isSettled && sharedCharges ? (
-          <LineItem
-            label="Shared Charges"
-            price={parseFloat(sharedCharges)}
-            labelColor="text-midgray"
-            className="pb-3"
-          ></LineItem>
-        ) : (
-          <div className="pb-3"></div>
-        )}
+        <LineItem
+          label="Shared Charges"
+          price={sharedCharges}
+          labelColor="text-midgray"
+          className="pb-3"
+        ></LineItem>
       </div>
     </div>
   );

@@ -5,6 +5,7 @@ export async function backend<T>(
   endpoint: string,
   body: unknown = null
 ): Promise<T> {
+  // TODO: Store token in context instead of fetching from localStorage??
   const token = localStorage.getItem("jwt");
   try {
     const response = await fetch(`${apiUrl}${endpoint}`, {
@@ -49,6 +50,7 @@ export interface Receipt {
   addl_gratuity: string;
   settled: boolean;
   item_counter: number;
+  consumers: number;
 }
 
 export async function createEmptyReceipt(): Promise<Receipt> {
@@ -67,6 +69,15 @@ export async function updateReceipt(
   return await backend("PUT", `/receipt/${receipt_id}`, {
     shared_cost,
     grand_total,
+  });
+}
+
+export async function setReceiptConsumers(
+  receipt_id: string,
+  consumers: number
+): Promise<Receipt> {
+  return await backend("PUT", `/receipt/${receipt_id}`, {
+    consumers,
   });
 }
 
@@ -98,6 +109,7 @@ export interface Item {
   quantity: string;
   receipt_id: string;
   split_counter?: number;
+  global_split: boolean;
 }
 
 export async function getItems(receipt_id: string): Promise<Item[]> {
@@ -108,12 +120,14 @@ export async function createItem(
   receipt_id: string,
   name: string,
   quantity: string,
-  price: string
+  price: string,
+  global_split: boolean
 ): Promise<Item> {
   return await backend("POST", `/receipt/${receipt_id}/item`, {
     name,
     quantity,
     price,
+    global_split,
   });
 }
 
@@ -122,12 +136,24 @@ export async function updateItem(
   item_id: string,
   name: string,
   quantity: string,
-  price: string
+  price: string,
+  global_split: boolean
 ): Promise<Item> {
   return await backend("PUT", `/receipt/${receipt_id}/item/${item_id}`, {
     name,
     quantity,
     price,
+    global_split,
+  });
+}
+
+export async function markGloballySplitItem(
+  receipt_id: string,
+  item_id: string,
+  global_split: boolean
+): Promise<Item> {
+  return await backend("PUT", `/receipt/${receipt_id}/item/${item_id}`, {
+    global_split,
   });
 }
 
@@ -193,11 +219,11 @@ export interface User {
   venmo_handle: string;
 }
 
-interface Role {
-  id: string;
+export interface Role {
   receipt_id: string;
   user_id: string;
-  role: string;
+  permission: string;
+  done: boolean;
 }
 
 export async function createOTP(phone: string): Promise<{ otp: string }> {
@@ -221,6 +247,13 @@ export async function createRole(
   role: string
 ): Promise<Role> {
   return await backend("POST", `/receipt/${receipt_id}/role`, { role });
+}
+
+export async function markRoleDone(
+  receipt_id: string,
+  done: boolean
+): Promise<Role> {
+  return await backend("PUT", `/receipt/${receipt_id}/role`, { done });
 }
 
 export async function createJWTToken(

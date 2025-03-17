@@ -9,11 +9,7 @@ import ModifyButton from "@/components/ModifyButton";
 import StickyButton from "@/components/StickyButton";
 import Container from "@/components/Container";
 import { useRouter } from "next/navigation";
-import {
-  useGlobalContext,
-  AuthStatus,
-  Permission,
-} from "@/contexts/GlobalContext";
+import { useGlobalContext, AuthStatus } from "@/contexts/GlobalContext";
 import { backend, createEmptyReceipt, getUploadLink } from "@/lib/backend";
 import Spinner from "@/components/Spinner";
 
@@ -42,7 +38,7 @@ const OptionButton: React.FC<OptionButtonProps> = ({
 };
 
 export default function UploadReceiptPage() {
-  const { status, setReceipt, setRole } = useGlobalContext();
+  const { status, setReceipt, user, setRole } = useGlobalContext();
   const router = useRouter();
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -84,7 +80,12 @@ export default function UploadReceiptPage() {
     setLoading(true);
     const receipt = await createEmptyReceipt();
     setReceipt(receipt);
-    setRole(Permission.HOST);
+    setRole({
+      receipt_id: receipt.id,
+      user_id: user?.id || "",
+      permission: "host",
+      done: false,
+    });
     router.push(`/${receipt.id}/editreceipt`);
   };
 
@@ -112,11 +113,17 @@ export default function UploadReceiptPage() {
       console.log("File upload failure");
     } else {
       const key = fields.key;
-      setRole(Permission.HOST);
+
       await backend("POST", "/ocr", { key });
       // await backend("POST", `/receipt/${key}/role`, {
       //   role: Permission.HOST,
       // });
+      setRole({
+        receipt_id: key,
+        user_id: user?.id || "",
+        permission: "host",
+        done: false,
+      });
       router.push(`/${key}/editreceipt`);
     }
   };
@@ -138,7 +145,12 @@ export default function UploadReceiptPage() {
         alt="Uploaded Receipt"
         className="w-full border border-lightgray rounded-lg"
       />
-      <StickyButton label="Scan Items" onClick={handleSplitReceipt} sticky />
+      <StickyButton
+        icon="fa-receipt"
+        label="Scan Items"
+        onClick={handleSplitReceipt}
+        sticky
+      />
     </Container>
   ) : (
     <Container centered>
@@ -169,7 +181,14 @@ export default function UploadReceiptPage() {
             icon="fa-images"
             className={`bg-primary py-3 px-6 rounded-full border-2 border-primary text-white transition-colors duration-150 ease-in-out active:bg-primarydark`}
           />
-          <Spacer size="medium" />
+          <div className="flex items-center justify-center space-x-2 my-4">
+            <hr className="flex-1 border-t border-lightgray" />
+            <Text type="body_semi" className="text-midgray">
+              or
+            </Text>
+            <hr className="flex-1 border-t border-lightgray" />
+          </div>
+          {/* <Spacer size="medium" /> */}
           <OptionButton
             label="Enter Manually"
             icon="fa-pen"

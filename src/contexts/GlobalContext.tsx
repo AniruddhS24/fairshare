@@ -13,6 +13,7 @@ import {
   getUserFromJWT,
   getUserRole,
   Receipt,
+  Role,
 } from "@/lib/backend";
 
 interface User {
@@ -40,9 +41,9 @@ interface GlobalContextType {
   status: AuthStatus;
   login: (userData: User) => void;
   logout: () => void;
-  getPermission: (receiptId: string) => Promise<Permission>;
-  role: Permission | null;
-  setRole: React.Dispatch<React.SetStateAction<Permission | null>>;
+  getRole: (receiptId: string) => Promise<Role>;
+  role: Role | null;
+  setRole: React.Dispatch<React.SetStateAction<Role | null>>;
   receipt: Receipt | null;
   setReceipt: React.Dispatch<React.SetStateAction<Receipt | null>>;
 }
@@ -61,7 +62,7 @@ export const GlobalProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [status, setStatus] = useState<AuthStatus>(AuthStatus.CHECKING);
   const [receipt, setReceipt] = useState<Receipt | null>(null);
-  const [role, setRole] = useState<Permission | null>(null);
+  const [role, setRole] = useState<Role | null>(null);
 
   const readJWT = () => {
     const jwt = localStorage.getItem("jwt");
@@ -91,26 +92,11 @@ export const GlobalProvider = ({ children }: { children: ReactNode }) => {
     readJWT();
   }, []);
 
-  const getPermission = async (receiptId: string): Promise<Permission> => {
+  const getRole = async (receiptId: string): Promise<Role> => {
     if (role) return role;
-    try {
-      const role = await getUserRole(receiptId);
-      const permission = role.role;
-      if (permission === "host") {
-        setRole(Permission.HOST);
-        return Permission.HOST;
-      } else if (permission === "consumer") {
-        setRole(Permission.CONSUMER);
-        return Permission.CONSUMER;
-      } else {
-        setRole(Permission.UNAUTHORIZED);
-        return Permission.UNAUTHORIZED;
-      }
-    } catch (error) {
-      console.error("There was a problem retrieving permissions:", error);
-      setRole(Permission.UNAUTHORIZED);
-      return Permission.UNAUTHORIZED;
-    }
+    const _role = await getUserRole(receiptId);
+    setRole(_role);
+    return _role;
   };
 
   const login = async (userData: User) => {
@@ -135,7 +121,7 @@ export const GlobalProvider = ({ children }: { children: ReactNode }) => {
         status,
         login,
         logout,
-        getPermission,
+        getRole,
         receipt,
         setReceipt,
         role,
