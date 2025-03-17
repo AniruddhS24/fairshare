@@ -244,9 +244,9 @@ export async function getUserRole(receipt_id: string): Promise<Role> {
 
 export async function createRole(
   receipt_id: string,
-  role: string
+  permission: string
 ): Promise<Role> {
-  return await backend("POST", `/receipt/${receipt_id}/role`, { role });
+  return await backend("POST", `/receipt/${receipt_id}/role`, { permission });
 }
 
 export async function markRoleDone(
