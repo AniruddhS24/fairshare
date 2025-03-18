@@ -10,7 +10,7 @@ import StickyButton from "@/components/StickyButton";
 import Container from "@/components/Container";
 import { useRouter } from "next/navigation";
 import { useGlobalContext, AuthStatus } from "@/contexts/GlobalContext";
-import { backend, createEmptyReceipt, getUploadLink } from "@/lib/backend";
+import { backend, getUploadLink } from "@/lib/backend";
 import Spinner from "@/components/Spinner";
 
 interface OptionButtonProps {
@@ -38,7 +38,7 @@ const OptionButton: React.FC<OptionButtonProps> = ({
 };
 
 export default function UploadReceiptPage() {
-  const { status, setReceipt, user, setRole } = useGlobalContext();
+  const { status, user, setRole } = useGlobalContext();
   const router = useRouter();
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -78,15 +78,15 @@ export default function UploadReceiptPage() {
 
   const handleCreateReceipt = async () => {
     setLoading(true);
-    const receipt = await createEmptyReceipt();
-    setReceipt(receipt);
-    setRole({
-      receipt_id: receipt.id,
-      user_id: user?.id || "",
-      permission: "host",
-      done: false,
-    });
-    router.push(`/${receipt.id}/editreceipt`);
+    // const receipt = await createEmptyReceipt();
+    // setReceipt(receipt);
+    // setRole({
+    //   receipt_id: receipt.id,
+    //   user_id: user?.id || "",
+    //   permission: "host",
+    //   done: false,
+    // });
+    router.push(`/new/editreceipt`);
   };
 
   const handleSplitReceipt = async () => {
@@ -155,9 +155,7 @@ export default function UploadReceiptPage() {
   ) : (
     <Container centered>
       <LogoutSection></LogoutSection>
-      <Spacer size="large" />
-      <Image src="/newlogo.png" alt="Logo" width={250} height={100} />
-      <Spacer size="large" />
+      <Image src="/applogo.png" alt="Logo" width={250} height={100} />
       <Text type="m_heading" className="text-darkest">
         Upload Receipt
       </Text>

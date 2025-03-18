@@ -35,11 +35,9 @@ const StickyButton: React.FC<StickyButtonProps> = ({
 
   return loading ? (
     <button
-      className={`w-full max-w-[300px] flex items-center justify-center ${
-        secondary
-          ? "bg-accent text-white active:bg-accentdark"
-          : "bg-primary text-white active:bg-primarydark"
-      } p-2.5 rounded-full transition-colors duration-150 ease-in-out  ${
+      className={`w-full flex items-center justify-center ${
+        secondary ? "bg-accent text-white " : "bg-primary text-white "
+      } p-2.5 rounded-full ${
         sticky
           ? "fixed bottom-4 left-1/2 transform -translate-x-1/2 z-10 max-w-[90%]"
           : ""
@@ -50,15 +48,23 @@ const StickyButton: React.FC<StickyButtonProps> = ({
   ) : (
     <button
       onClick={handleClick}
-      className={`w-full flex items-center justify-center  ${
-        secondary
-          ? "bg-accent text-white active:bg-accentdark"
-          : "bg-primary text-white active:bg-primarydark"
-      } p-2.5 rounded-full transition-colors duration-150 ease-in-out  ${
-        sticky
-          ? "fixed bottom-4 left-1/2 transform -translate-x-1/2 z-10 max-w-[90%]"
-          : ""
-      } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
+      className={`w-full flex items-center justify-center  
+        ${
+          secondary
+            ? disabled
+              ? "bg-accent text-white opacity-50 cursor-not-allowed pointer-events-none"
+              : "bg-accent text-white active:bg-accentdark"
+            : disabled
+            ? "bg-primary text-white opacity-50 cursor-not-allowed pointer-events-none"
+            : "bg-primary text-white active:bg-primarydark"
+        } 
+        p-2.5 rounded-full transition-colors duration-150 ease-in-out  
+        ${
+          sticky
+            ? "fixed bottom-4 left-1/2 transform -translate-x-1/2 z-10 max-w-[90%]"
+            : ""
+        }
+      `}
       disabled={disabled}
     >
       {icon == "venmo" ? (

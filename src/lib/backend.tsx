@@ -57,6 +57,20 @@ export async function createEmptyReceipt(): Promise<Receipt> {
   return await backend("POST", `/receipt`, {});
 }
 
+export async function createReceipt(
+  shared_cost: number,
+  grand_total: number,
+  addl_gratuity: number,
+  consumers: number
+): Promise<Receipt> {
+  return await backend("POST", `/receipt`, {
+    shared_cost,
+    grand_total,
+    addl_gratuity,
+    consumers,
+  });
+}
+
 export async function getReceipt(receipt_id: string): Promise<Receipt> {
   return await backend("GET", `/receipt/${receipt_id}`);
 }

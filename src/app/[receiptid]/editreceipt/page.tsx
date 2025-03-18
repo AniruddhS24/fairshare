@@ -25,6 +25,7 @@ import {
   updateItem,
   createItem,
   deleteItem,
+  createReceipt,
 } from "@/lib/backend";
 import PercentageInput from "@/components/PercentageInput";
 
@@ -44,7 +45,8 @@ export default function EditReceiptPage({
 }: {
   params: { receiptid: string };
 }) {
-  const { status, getRole, receipt, setReceipt } = useGlobalContext();
+  const { status, user, getRole, receipt, setReceipt, setRole } =
+    useGlobalContext();
   const [loading, setLoading] = useState(true);
   const [receiptItems, setReceiptItems] = useState<EditItemProps[]>([]);
   const [sharedCharges, setSharedCharges] = useState({
@@ -81,6 +83,11 @@ export default function EditReceiptPage({
     } else if (status === AuthStatus.BAD_TOKEN) {
       router.push(`/user`);
     } else if (status === AuthStatus.AUTHORIZED) {
+      if (receipt_id === "new") {
+        addItem();
+        setLoading(false);
+        return;
+      }
       getRole(receipt_id).then((role) => {
         if (role.permission !== Permission.HOST) {
           router.push(`/unauthorized`);
@@ -210,47 +217,35 @@ export default function EditReceiptPage({
   };
 
   const safeParseFloat = (value: string) => {
-    return parseFloat(value === "" ? "0" : value);
+    const result = parseFloat(value === "" ? "0" : value);
+    return isNaN(result) ? 0 : result;
   };
 
   const handleSaveEdits = async () => {
+    let _receipt_id = receipt_id;
     const data = receiptItems;
     let receipt_changed =
       sharedCharges.edited || additionalGratuity.edited || numConsumers.edited;
     const promises = [];
-    for (const item of data) {
-      if (item.id && item.deleted) {
-        receipt_changed = true;
-        promises.push(deleteItem(receipt_id, item.id));
-      } else if (item.id && item.edited) {
-        receipt_changed = true;
-        promises.push(
-          updateItem(
-            receipt_id,
-            item.id,
-            item.name,
-            item.quantity,
-            safeParseFloat(item.price).toFixed(2),
-            item.checked
-          )
-        );
-      } else if (!item.id && !item.deleted) {
-        receipt_changed = true;
-        promises.push(
-          createItem(
-            receipt_id,
-            item.name,
-            item.quantity,
-            safeParseFloat(item.price).toFixed(2),
-            item.checked
-          )
-        );
-      }
-    }
-    if (receipt_changed) {
+    if (receipt_id === "new") {
+      const receipt = await createReceipt(
+        safeParseFloat(sharedCharges.value),
+        calculateTotal(),
+        safeParseFloat(additionalGratuity.value),
+        numConsumers.value
+      );
+      _receipt_id = receipt.id;
+      setReceipt(receipt);
+      setRole({
+        receipt_id: receipt.id,
+        user_id: user?.id || "",
+        permission: "host",
+        done: false,
+      });
+    } else if (receipt_changed) {
       setReceipt((prevReceipt) => {
         const prev = prevReceipt || {
-          id: receipt_id,
+          id: _receipt_id,
           image_url: "",
           settled: false,
           item_counter: receiptItems.length,
@@ -264,13 +259,43 @@ export default function EditReceiptPage({
         };
       });
       promises.push(
-        backend("PUT", `/receipt/${receipt_id}`, {
+        backend("PUT", `/receipt/${_receipt_id}`, {
           consumers: numConsumers.value,
           addl_gratuity: additionalGratuity.value,
           shared_cost: sharedCharges.value,
           grand_total: calculateTotal().toFixed(2),
         })
       );
+    }
+
+    for (const item of data) {
+      if (item.id && item.deleted) {
+        receipt_changed = true;
+        promises.push(deleteItem(_receipt_id, item.id));
+      } else if (item.id && item.edited) {
+        receipt_changed = true;
+        promises.push(
+          updateItem(
+            _receipt_id,
+            item.id,
+            item.name,
+            item.quantity,
+            safeParseFloat(item.price).toFixed(2),
+            item.checked
+          )
+        );
+      } else if (!item.id && !item.deleted) {
+        receipt_changed = true;
+        promises.push(
+          createItem(
+            _receipt_id,
+            item.name,
+            item.quantity,
+            safeParseFloat(item.price).toFixed(2),
+            item.checked
+          )
+        );
+      }
     }
     for (const promise of promises) {
       try {
@@ -279,7 +304,7 @@ export default function EditReceiptPage({
         console.error("Error processing item:", error);
       }
     }
-    router.push(`/${receipt_id}/live`);
+    router.push(`/${_receipt_id}/live`);
   };
 
   return splitDetailsStep ? (
@@ -290,6 +315,7 @@ export default function EditReceiptPage({
       </Text>
       <Spacer size="large" />
       <Text type="body" className="text-midgray">
+        <i className={`fas fa-regular fa-user-group mr-1`}></i>
         <b>How many people</b> are splitting this receipt, including you?
       </Text>
       <Spacer size="small" />
@@ -322,6 +348,7 @@ export default function EditReceiptPage({
       </div>
       <Spacer size="small" />
       <Text type="body" className="text-midgray">
+        <i className={`fas fa-regular fa-earth-americas mr-1`}></i>
         Were any items split <b>evenly amongst everyone</b>?
       </Text>
       <Spacer size="small" />
@@ -360,7 +387,12 @@ export default function EditReceiptPage({
           ))}
         </div>
       </div>
-      <StickyButton label="Next" onClick={handleSaveEdits} sticky />
+      <StickyButton
+        label="Next"
+        onClick={handleSaveEdits}
+        disabled={numConsumers.value === 1}
+        sticky
+      />
     </Container>
   ) : (
     <Container>
@@ -514,6 +546,7 @@ export default function EditReceiptPage({
           <StickyButton
             label="Next"
             onClick={() => setSplitDetailsStep(true)}
+            disabled={receiptItems.some((item) => item.name === "")}
             sticky
           />
         </div>
