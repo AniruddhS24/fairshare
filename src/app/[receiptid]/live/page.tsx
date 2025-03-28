@@ -301,13 +301,13 @@ export default function LiveReceiptPage({
 
   const shareReceipt = async (onboarding: boolean) => {
     const url = onboarding
-      ? `https://tabify.live/user?receiptid=${params.receiptid}&onboardConsumer=true`
-      : `https://tabify.live/${params.receiptid}/live`;
+      ? `https://payven.app/user?receiptid=${params.receiptid}&onboardConsumer=true`
+      : `https://payven.app/${params.receiptid}/live`;
     if (navigator.share) {
       try {
         await navigator.share({
-          title: "Tabify",
-          text: "Split your receipt with Tabify",
+          title: "Payven",
+          text: "Split your receipt with Payven",
           url: url,
         });
       } catch (error) {
@@ -388,7 +388,7 @@ export default function LiveReceiptPage({
   const sendToVenmo = () => {
     // Go to Venmo and fill price to pay with
     const amount = individualTotal(user?.id || "");
-    const note = "Tabify restaurant split";
+    const note = "Payven restaurant split";
     const venmoURI = `venmo://paycharge?txn=pay&amount=${amount}&audience=private&note=${note}`;
 
     // Open the Venmo app (if installed) or the web page

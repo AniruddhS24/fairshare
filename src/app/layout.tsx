@@ -16,8 +16,8 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Tabify",
-  description: "Tabify is a web app that helps you split receipts.",
+  title: "Payven",
+  description: "Payven is a web app that helps you split receipts.",
 };
 
 export default function RootLayout({

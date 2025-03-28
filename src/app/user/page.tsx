@@ -227,7 +227,7 @@ function UserOnboardingPage() {
         Welcome
       </Text>
       <Text type="body" className="text-center text-midgray">
-        Get started splitting receipts seamlessly
+        Split receipts. Pay evenly.
       </Text>
       <Spacer size="large" />
       <PhoneInput
@@ -252,7 +252,7 @@ function UserOnboardingPage() {
       {phoneFocused ? <Spacer size="large" /> : null}
       <Text type="body" className="text-center text-midgray text-xs">
         By providing your phone number, you consent to receive SMS alerts from
-        Tabify. Message and data rates may apply. You may opt-out at any time.{" "}
+        Payven. Message and data rates may apply. You may opt-out at any time.{" "}
         <a
           className="underline"
           href="https://www.freeprivacypolicy.com/live/b3b3f6bb-e1e7-4c47-99d4-70af72330916"

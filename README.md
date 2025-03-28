@@ -1,3 +1,3 @@
-# fairshare
+# payven
 
-Repo for fairshare app
+Repo for payven app
