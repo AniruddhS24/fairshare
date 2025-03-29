@@ -79,7 +79,7 @@ export default function EditReceiptPage({
     if (status === AuthStatus.CHECKING) {
       return;
     } else if (status === AuthStatus.NO_TOKEN) {
-      router.push(`/user?receiptid=${receipt_id}&page=editreceipt`);
+      router.push(`/user?receiptid=${receipt_id}&page=edit`);
     } else if (status === AuthStatus.BAD_TOKEN) {
       router.push(`/user`);
     } else if (status === AuthStatus.AUTHORIZED) {

@@ -86,7 +86,7 @@ export default function UploadReceiptPage() {
     //   permission: "host",
     //   done: false,
     // });
-    router.push(`/new/editreceipt`);
+    router.push(`/new/edit`);
   };
 
   const handleSplitReceipt = async () => {
@@ -124,7 +124,7 @@ export default function UploadReceiptPage() {
         permission: "host",
         done: false,
       });
-      router.push(`/${key}/editreceipt`);
+      router.push(`/${key}/edit`);
     }
   };
 
@@ -155,7 +155,9 @@ export default function UploadReceiptPage() {
   ) : (
     <Container centered>
       <LogoutSection></LogoutSection>
-      <Image src="/applogo.png" alt="Logo" width={250} height={100} />
+      <Spacer size="large" />
+      <Image src="/applogo.png" alt="Logo" width={200} height={100} />
+      <Spacer size="large" />
       <Text type="m_heading" className="text-darkest">
         Upload Receipt
       </Text>

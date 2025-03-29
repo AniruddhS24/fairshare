@@ -222,7 +222,9 @@ function UserOnboardingPage() {
     </div>
   ) : !waitingForCode ? (
     <Container centered>
-      <Image src="/applogo.png" alt="Logo" width={250} height={100} />
+      <Spacer size="large" />
+      <Image src="/applogo.png" alt="Logo" width={200} height={100} />
+      <Spacer size="large" />
       <Text type="m_heading" className="text-darkest">
         Welcome
       </Text>
@@ -263,7 +265,9 @@ function UserOnboardingPage() {
     </Container>
   ) : newUserSignup ? (
     <Container centered>
-      <Image src="/applogo.png" alt="Logo" width={250} height={100} />
+      <Spacer size="large" />
+      <Image src="/applogo.png" alt="Logo" width={200} height={100} />
+      <Spacer size="large" />
       <Text type="m_heading" className="text-darkest">
         Enter Information
       </Text>

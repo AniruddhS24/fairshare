@@ -319,7 +319,7 @@ export default function LiveReceiptPage({
   };
 
   const editReceipt = () => {
-    router.push(`/${params.receiptid}/editreceipt`);
+    router.push(`/${params.receiptid}/edit`);
   };
 
   const handleReminder = (name: string) => {
