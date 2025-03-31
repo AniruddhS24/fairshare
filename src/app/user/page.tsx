@@ -32,7 +32,6 @@ const PhoneVerification: React.FC<PhoneVerificationProps> = ({
 }) => {
   const inputRef = useRef<HTMLInputElement>(null);
   const [resentCode, setResentCode] = useState(false);
-  const [inputFocused, setInputFocused] = useState(false);
 
   // Update the code when the user types
   const handleInputChange = (value: string) => {
@@ -40,27 +39,9 @@ const PhoneVerification: React.FC<PhoneVerificationProps> = ({
     setCode(sanitizedValue);
   };
 
-  // Focus the hidden input when the user clicks on the container
   const handleSlotClick = () => {
     inputRef.current?.focus();
-    setInputFocused(true);
   };
-
-  useEffect(() => {
-    if (!inputRef.current) return;
-
-    const handleBlur = () => {
-      setTimeout(() => {
-        setInputFocused(false);
-      }, 50);
-    };
-
-    inputRef.current.addEventListener("blur", handleBlur);
-
-    return () => {
-      inputRef.current?.removeEventListener("blur", handleBlur);
-    };
-  }, []);
 
   return (
     <Container centered>
@@ -96,12 +77,11 @@ const PhoneVerification: React.FC<PhoneVerificationProps> = ({
             </div>
           ))}
       </div>
-      {inputFocused ? <Spacer size="large" /> : null}
+      <Spacer size="large" />
       <StickyButton
         label="Verify"
         onClick={async () => handleCode(code)}
         disabled={code.length !== 6}
-        sticky={!inputFocused}
       />
       <Spacer size="large" />
       {!resentCode ? (
@@ -129,9 +109,7 @@ function UserOnboardingPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [nameFocused, setNameFocused] = useState(false);
   const [name, setName] = useState<string>("");
-  const [phoneFocused, setPhoneFocused] = useState(false);
   const [phoneNumber, setPhoneNumber] = useState<string>("");
   const [venmoHandle] = useState<string>("");
   const [code, setCode] = useState<string>("");
@@ -236,7 +214,6 @@ function UserOnboardingPage() {
         placeholder="Phone number"
         value={phoneNumber}
         setValue={setPhoneNumber}
-        setFocused={setPhoneFocused}
       />
       {/* <Spacer size="medium" />
       <TextInput
@@ -245,13 +222,8 @@ function UserOnboardingPage() {
         setValue={setVenmoHandle}
       /> */}
       <Spacer size="large" />
-      <StickyButton
-        label="Next"
-        onClick={handleNext}
-        disabled={!phoneNumber}
-        sticky={!phoneFocused}
-      />
-      {phoneFocused ? <Spacer size="large" /> : null}
+      <StickyButton label="Next" onClick={handleNext} disabled={!phoneNumber} />
+      <Spacer size="large" />
       <Text type="body" className="text-center text-midgray text-xs">
         By providing your phone number, you consent to receive SMS alerts from
         Payven. Message and data rates may apply. You may opt-out at any time.{" "}
@@ -283,12 +255,7 @@ function UserOnboardingPage() {
         className={"font-extrabold text-primary opacity-100"}
       />
       <Spacer size="medium" />
-      <TextInput
-        placeholder="Name"
-        value={name}
-        setValue={setName}
-        setFocused={setNameFocused}
-      />
+      <TextInput placeholder="Name" value={name} setValue={setName} />
       {/* <Spacer size="medium" />
       <TextInput
         placeholder="Venmo Handle (optional)"
@@ -296,12 +263,7 @@ function UserOnboardingPage() {
         setValue={setVenmoHandle}
       /> */}
       <Spacer size="large" />
-      <StickyButton
-        label="Next"
-        onClick={handleSignupNext}
-        disabled={!name}
-        sticky={!nameFocused}
-      />
+      <StickyButton label="Next" onClick={handleSignupNext} disabled={!name} />
     </Container>
   ) : (
     <PhoneVerification
