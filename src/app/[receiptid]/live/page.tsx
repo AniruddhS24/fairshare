@@ -107,7 +107,7 @@ export default function LiveReceiptPage({
 
   const router = useRouter();
   const [wsUrl, setWsUrl] = useState<string>(
-    "wss://epccxqhta9.execute-api.us-east-1.amazonaws.com/prod"
+    "wss://tx3jw6v7dj.execute-api.us-east-1.amazonaws.com/prod"
   );
 
   const cleanKey = (key: string) => {
@@ -297,7 +297,7 @@ export default function LiveReceiptPage({
           );
         }
         setWsUrl(
-          `wss://epccxqhta9.execute-api.us-east-1.amazonaws.com/prod?receiptId=${params.receiptid}&userId=${user?.id}`
+          `wss://tx3jw6v7dj.execute-api.us-east-1.amazonaws.com/prod?receiptId=${params.receiptid}&userId=${user?.id}`
         );
       });
     }
