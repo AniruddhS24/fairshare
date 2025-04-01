@@ -111,6 +111,7 @@ function UserOnboardingPage() {
   const [loading, setLoading] = useState(false);
   const [name, setName] = useState<string>("");
   const [phoneNumber, setPhoneNumber] = useState<string>("");
+  const [isGuest, setIsGuest] = useState<boolean>(false);
   const [venmoHandle] = useState<string>("");
   const [code, setCode] = useState<string>("");
   const [waitingForCode, setWaitingForCode] = useState(false);
@@ -165,6 +166,13 @@ function UserOnboardingPage() {
     setWaitingForCode(true);
   };
 
+  const handleGuestNext = () => {
+    setPhoneNumber(
+      `guest-${Date.now()}-${Math.random().toString(36).substring(2, 10)}`
+    );
+    setIsGuest(true);
+  };
+
   const handleSignupNext = async () => {
     const userData = {
       id: null,
@@ -198,7 +206,7 @@ function UserOnboardingPage() {
     <div className="flex w-full items-center justify-center">
       <Spinner color="text-primary" />
     </div>
-  ) : !waitingForCode ? (
+  ) : !isGuest && !waitingForCode ? (
     <Container centered>
       <Spacer size="large" />
       <Image src="/applogo.png" alt="Logo" width={200} height={100} />
@@ -223,6 +231,11 @@ function UserOnboardingPage() {
       /> */}
       <Spacer size="large" />
       <StickyButton label="Next" onClick={handleNext} disabled={!phoneNumber} />
+      <StickyButton
+        tertiary
+        label="Continue as Guest"
+        onClick={handleGuestNext}
+      />
       <Spacer size="large" />
       <Text type="body" className="text-center text-midgray text-xs">
         By providing your phone number, you consent to receive SMS alerts from
@@ -234,6 +247,37 @@ function UserOnboardingPage() {
           Privacy policy
         </a>
       </Text>
+    </Container>
+  ) : isGuest ? (
+    <Container centered>
+      <Spacer size="large" />
+      <Image src="/applogo.png" alt="Logo" width={200} height={100} />
+      <Spacer size="large" />
+      <Text type="m_heading" className="text-darkest">
+        Guest Sign In
+      </Text>
+      <Text type="body" className="text-center text-midgray">
+        Enter your name to proceed. Note as a guest you will{" "}
+        <b>not receive text alerts</b> for receipt updates.
+      </Text>
+      <Spacer size="large" />
+      <TextInput placeholder="Name" value={name} setValue={setName} />
+      {/* <Spacer size="medium" />
+      <TextInput
+        placeholder="Venmo Handle (optional)"
+        value={venmoHandle}
+        setValue={setVenmoHandle}
+      /> */}
+      <Spacer size="large" />
+      <StickyButton label="Next" onClick={handleSignupNext} disabled={!name} />
+      <StickyButton
+        label="Back to Sign In"
+        onClick={() => {
+          setPhoneNumber("");
+          setIsGuest(false);
+        }}
+        tertiary
+      />
     </Container>
   ) : newUserSignup ? (
     <Container centered>

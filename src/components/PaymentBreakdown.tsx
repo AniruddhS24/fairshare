@@ -52,7 +52,7 @@ const PaymentBreakdown: React.FC<PaymentBreakdownProps> = ({
           </div>
         ))}
         <LineItem
-          label="Shared Charges"
+          label="Shared Charges (Tax, Tips, Fees)"
           price={sharedCharges}
           labelColor="text-midgray"
           className="pb-3"

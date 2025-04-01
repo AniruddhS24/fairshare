@@ -12,30 +12,7 @@ import { useRouter } from "next/navigation";
 import { useGlobalContext, AuthStatus } from "@/contexts/GlobalContext";
 import { backend, getUploadLink } from "@/lib/backend";
 import Spinner from "@/components/Spinner";
-
-interface OptionButtonProps {
-  label: string;
-  onClick: () => void;
-  icon?: string;
-  className?: string;
-}
-
-const OptionButton: React.FC<OptionButtonProps> = ({
-  label,
-  onClick,
-  icon,
-  className = "",
-}) => {
-  return (
-    <button
-      onClick={() => onClick()}
-      className={`w-full flex items-center justify-center ${className}`}
-    >
-      {icon ? <i className={`fas fa-regular fa-xl ${icon} mr-2`}></i> : null}
-      <Text type="s_heading">{label}</Text>
-    </button>
-  );
-};
+import OptionButton from "@/components/OptionButton";
 
 export default function UploadReceiptPage() {
   const { status, user, setRole } = useGlobalContext();
@@ -171,6 +148,7 @@ export default function UploadReceiptPage() {
           <OptionButton
             label="Take Photo"
             onClick={openCamera}
+            iconSize="fa-xl"
             icon="fa-camera"
             className={`bg-primary py-3 px-6 rounded-full border-2 border-primary text-white transition-colors duration-150 ease-in-out active:bg-primarydark`}
           />
@@ -178,6 +156,7 @@ export default function UploadReceiptPage() {
           <OptionButton
             label="Upload Image"
             onClick={openFileInput}
+            iconSize="fa-xl"
             icon="fa-images"
             className={`bg-primary py-3 px-6 rounded-full border-2 border-primary text-white transition-colors duration-150 ease-in-out active:bg-primarydark`}
           />
@@ -192,6 +171,7 @@ export default function UploadReceiptPage() {
           <OptionButton
             label="Enter Manually"
             icon="fa-pen"
+            iconSize="fa-xl"
             onClick={handleCreateReceipt}
             className={`bg-white py-3 px-6 rounded-full border-2 border-primarylight text-primary transition-colors duration-150 ease-in-out active:bg-primarylight`}
           />

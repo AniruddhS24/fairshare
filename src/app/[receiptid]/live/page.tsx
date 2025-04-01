@@ -15,6 +15,9 @@ import LineItem from "@/components/LineItem";
 import StickyButton from "@/components/StickyButton";
 import useWebSocket from "react-use-websocket";
 import { Banner, BannerProps } from "@/components/Banner";
+import OptionButton from "@/components/OptionButton";
+import { QRCodeCanvas } from "qrcode.react";
+
 import {
   useGlobalContext,
   AuthStatus,
@@ -100,6 +103,7 @@ export default function LiveReceiptPage({
 
   const [banner, setBanner] = useState<BannerProps | null>(null);
   const [isEditing, setIsEditing] = useState<boolean>(false);
+  const [isQRCode, setIsQRCode] = useState<boolean>(false);
 
   const router = useRouter();
   const [wsUrl, setWsUrl] = useState<string>(
@@ -288,7 +292,9 @@ export default function LiveReceiptPage({
         if (role.permission === Permission.HOST) {
           setIsHost(true);
         } else if (role.permission === Permission.UNAUTHORIZED) {
-          router.push(`/unauthorized`);
+          router.push(
+            `/user?receiptid=${params.receiptid}&onboardConsumer=true`
+          );
         }
         setWsUrl(
           `wss://epccxqhta9.execute-api.us-east-1.amazonaws.com/prod?receiptId=${params.receiptid}&userId=${user?.id}`
@@ -454,100 +460,119 @@ export default function LiveReceiptPage({
           </div>
         </div>
       )}
-      <Container>
-        <LogoutSection></LogoutSection>
-        {isHost && !unclaimedItems && !isSettled ? (
-          <Banner
-            label="Settle receipt to finalize payments!"
-            icon="fa-check"
-            type="success"
-            disappear={false}
-          />
-        ) : null}
-        {banner ? (
-          <Banner
-            label={banner.label}
-            icon={banner.icon}
-            type={banner.type}
-            disappear={true}
-          />
-        ) : null}
-        <div className="flex items-center">
+      {isQRCode ? (
+        <Container>
+          <LogoutSection onBack={() => setIsQRCode(!isQRCode)}></LogoutSection>
           <Text type="xl_heading" className="text-darkest">
-            Live Receipt
+            QR Code
           </Text>
-          {isHost && !isSettled ? (
-            <div>
-              <HostActionButton
-                icon="fa-pen"
-                onClick={editReceipt}
-                className="ms-3"
-                disabled={isSettled}
-              />
-              {!unclaimedItems ? (
+          <Text type="body" className="text-midgray">
+            Scan this QR code to join the receipt as a consumer.
+          </Text>
+          <Spacer size="large"></Spacer>
+          <div className="flex justify-center items-center w-full">
+            <QRCodeCanvas
+              value={`https://payven.app/user?receiptid=${params.receiptid}&onboardConsumer=true`}
+              size={window.innerWidth * 0.8}
+              className="w-full max-w-[400px]"
+            />
+          </div>
+        </Container>
+      ) : (
+        <Container>
+          <LogoutSection></LogoutSection>
+          {isHost && !unclaimedItems && !isSettled ? (
+            <Banner
+              label="Settle receipt to finalize payments!"
+              icon="fa-check"
+              type="success"
+              disappear={false}
+            />
+          ) : null}
+          {banner ? (
+            <Banner
+              label={banner.label}
+              icon={banner.icon}
+              type={banner.type}
+              disappear={true}
+            />
+          ) : null}
+          <div className="flex items-center">
+            <Text type="xl_heading" className="text-darkest">
+              Live Receipt
+            </Text>
+            {isHost && !isSettled ? (
+              <div>
                 <HostActionButton
-                  icon="fa-arrow-up-from-bracket"
-                  onClick={() => shareReceipt(true)}
+                  icon="fa-pen"
+                  onClick={editReceipt}
                   className="ms-3"
                   disabled={isSettled}
                 />
-              ) : null}
+                {!unclaimedItems ? (
+                  <HostActionButton
+                    icon="fa-arrow-up-from-bracket"
+                    onClick={() => shareReceipt(true)}
+                    className="ms-3"
+                    disabled={isSettled}
+                  />
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+          <Spacer size="small" />
+          {isSettled ? (
+            <Text type="body" className="text-midgray">
+              Receipt has been finalized.
+            </Text>
+          ) : isHost ? (
+            <Text type="body" className="text-midgray">
+              Tap the portions you consumed and share receipt link with others.
+            </Text>
+          ) : (
+            <Text type="body" className="text-midgray">
+              Tap the portions you consumed. Only pay the host{" "}
+              <b>after they have settled the receipt.</b>
+            </Text>
+          )}
+          {isHost ? (
+            <div className="w-full">
+              <Spacer size="medium" />
+              <SegmentedToggle
+                tab1label="Receipt"
+                tab1icon="fa-receipt"
+                tab2label="Breakdown"
+                tab2icon="fa-users"
+                selectedTab={selectedTab}
+                setSelectedTab={setSelectedTab}
+              />
             </div>
           ) : null}
-        </div>
-        <Spacer size="small" />
-        {isSettled ? (
-          <Text type="body" className="text-midgray">
-            Receipt has been finalized.
-          </Text>
-        ) : isHost ? (
-          <Text type="body" className="text-midgray">
-            Tap the portions you consumed and share receipt link with others.
-          </Text>
-        ) : (
-          <Text type="body" className="text-midgray">
-            Tap the portions you consumed. Only pay the host{" "}
-            <b>after they have settled the receipt.</b>
-          </Text>
-        )}
-        {isHost ? (
-          <div className="w-full">
-            <Spacer size="medium" />
-            <SegmentedToggle
-              tab1label="Receipt"
-              tab1icon="fa-receipt"
-              tab2label="Breakdown"
-              tab2icon="fa-users"
-              selectedTab={selectedTab}
-              setSelectedTab={setSelectedTab}
-            />
-          </div>
-        ) : null}
-        <Spacer size="medium" />
-        {!loading ? (
-          selectedTab == 0 ? (
-            <div className="w-full pb-20">
-              <PaymentBreakdown
-                consumer_items={individualTotal(user?.id || "")}
-                sharedCharges={sharedCharges}
-              ></PaymentBreakdown>
-              <Spacer size="medium" />
-              <DynamicSelection
-                receipt_id={params.receiptid}
-                items={receiptItems}
-                users={users}
-                splits={splits}
-                pendingAdds={pendingAdditions}
-                setPendingAdditions={setPendingAdditions}
-                pendingDeletions={pendingDeletions}
-                setPendingDeletions={setPendingDeletions}
-                disabled={isSettled}
-                onSplitChange={() => {
-                  setBanner(null);
-                  setIsEditing(true);
-                }}
-              ></DynamicSelection>
-              {/* {isHost ? (
+          <Spacer size="medium" />
+          {!loading ? (
+            selectedTab == 0 ? (
+              <div className="w-full pb-20">
+                <PaymentBreakdown
+                  consumer_items={individualTotal(user?.id || "")}
+                  sharedCharges={sharedCharges}
+                ></PaymentBreakdown>
+                <Spacer size="medium" />
+                <DynamicSelection
+                  receipt_id={params.receiptid}
+                  items={receiptItems}
+                  users={users}
+                  splits={splits}
+                  pendingAdds={pendingAdditions}
+                  setPendingAdditions={setPendingAdditions}
+                  pendingDeletions={pendingDeletions}
+                  setPendingDeletions={setPendingDeletions}
+                  disabled={isSettled}
+                  onSplitChange={() => {
+                    setBanner(null);
+                    setIsEditing(true);
+                  }}
+                ></DynamicSelection>
+                {/* {isHost ? (
                 <LineItem
                   label="Claimed Amount"
                   price={currentTotal()}
@@ -555,83 +580,99 @@ export default function LiveReceiptPage({
                   bold
                 ></LineItem>
               ) : null} */}
-              <LineItem
-                label="Subtotal"
-                price={
-                  receipt
-                    ? parseFloat(receipt.grand_total) -
-                      parseFloat(receipt.shared_cost) -
-                      parseFloat(receipt.addl_gratuity)
-                    : 0
-                }
-                labelColor="text-midgray"
-                bold
-              ></LineItem>
-              <LineItem
-                label="Tax + Fees"
-                price={receipt ? parseFloat(receipt.shared_cost) : 0}
-                labelColor="text-midgray"
-                bold
-              ></LineItem>
-              {parseFloat(receipt ? receipt.addl_gratuity : "0") != 0 ? (
                 <LineItem
-                  label="Tip"
-                  price={receipt ? parseFloat(receipt.addl_gratuity) : 0}
+                  label="Subtotal"
+                  price={
+                    receipt
+                      ? parseFloat(receipt.grand_total) -
+                        parseFloat(receipt.shared_cost) -
+                        parseFloat(receipt.addl_gratuity)
+                      : 0
+                  }
                   labelColor="text-midgray"
                   bold
                 ></LineItem>
-              ) : null}
-              <LineItem
-                label="Grand Total"
-                price={receipt ? parseFloat(receipt.grand_total) : 0}
-                labelColor="text-primary"
-                bold
-              ></LineItem>
-              {isEditing &&
-              (Object.keys(pendingAdditions).length > 0 ||
-                Object.keys(pendingDeletions).length > 0) ? (
-                <StickyButton
-                  label="Save changes"
-                  icon="fa-floppy-disk"
-                  onClick={saveEdits}
-                  sticky
-                  secondary
-                />
-              ) : isHost && !unclaimedItems && !isSettled ? (
-                <StickyButton
-                  label="Settle Receipt"
-                  onClick={() => setIsSettledPopupVisible(true)}
-                  sticky
-                />
-              ) : isHost && !isSettled ? (
-                <StickyButton
-                  label="Share Receipt Link"
-                  icon="fa-arrow-up-from-bracket"
-                  onClick={() => shareReceipt(true)}
-                  sticky
-                />
-              ) : !isHost && isSettled ? (
-                <StickyButton
-                  label="Pay Host"
-                  icon="venmo"
-                  onClick={sendToVenmo}
-                  sticky
-                />
-              ) : null}
-            </div>
-          ) : (
-            <div className="w-full">
-              {Object.values(users).map((person, index) => (
-                <ConsumerBreakdown
-                  key={index}
-                  consumer_items={individualTotal(person?.id)}
-                  user_name={person?.name || ""}
-                  sharedCharges={sharedCharges}
-                  isHost={person?.id == user?.id}
-                  handleReminder={handleReminder}
-                />
-              ))}
-              {/* {isHost ? (
+                <LineItem
+                  label="Tax + Fees"
+                  price={receipt ? parseFloat(receipt.shared_cost) : 0}
+                  labelColor="text-midgray"
+                  bold
+                ></LineItem>
+                {parseFloat(receipt ? receipt.addl_gratuity : "0") != 0 ? (
+                  <LineItem
+                    label="Tip"
+                    price={receipt ? parseFloat(receipt.addl_gratuity) : 0}
+                    labelColor="text-midgray"
+                    bold
+                  ></LineItem>
+                ) : null}
+                <LineItem
+                  label="Grand Total"
+                  price={receipt ? parseFloat(receipt.grand_total) : 0}
+                  labelColor="text-primary"
+                  bold
+                ></LineItem>
+                {isEditing &&
+                (Object.keys(pendingAdditions).length > 0 ||
+                  Object.keys(pendingDeletions).length > 0) ? (
+                  <StickyButton
+                    label="Save changes"
+                    icon="fa-floppy-disk"
+                    onClick={saveEdits}
+                    sticky
+                    secondary
+                  />
+                ) : isHost && !unclaimedItems && !isSettled ? (
+                  <StickyButton
+                    label="Settle Receipt"
+                    onClick={() => setIsSettledPopupVisible(true)}
+                    sticky
+                  />
+                ) : isHost && !isSettled ? (
+                  // <StickyButton
+                  //   label="Share Receipt Link"
+                  //   icon="fa-arrow-up-from-bracket"
+                  //   onClick={() => shareReceipt(true)}
+                  //   sticky
+                  // />
+                  <div className="fixed bottom-0 left-0 w-full p-2 bg-white flex justify-between z-10">
+                    <OptionButton
+                      label="QR Code"
+                      iconSize="fa-lg"
+                      icon="fa-qrcode"
+                      onClick={() => setIsQRCode(true)}
+                      className={`bg-white mr-2 p-2 rounded-full border-2 border-primarylight text-primary transition-colors duration-150 ease-in-out active:bg-primarylight`}
+                    />
+                    <OptionButton
+                      label="Share Link"
+                      iconSize="fa-lg"
+                      icon="fa-arrow-up-from-bracket"
+                      onClick={() => shareReceipt(true)}
+                      className={`bg-primary ml-2 p-2 rounded-full border-2 border-primary text-white transition-colors duration-150 ease-in-out active:bg-primarydark`}
+                    />
+                  </div>
+                ) : !isHost && isSettled ? (
+                  <StickyButton
+                    label="Pay Host"
+                    icon="venmo"
+                    onClick={sendToVenmo}
+                    sticky
+                  />
+                ) : null}
+              </div>
+            ) : (
+              <div className="w-full">
+                {Object.values(users).map((person, index) => (
+                  <ConsumerBreakdown
+                    key={index}
+                    consumer_items={individualTotal(person?.id)}
+                    user_name={person?.name || ""}
+                    sharedCharges={sharedCharges}
+                    isHost={person?.id == user?.id}
+                    handleReminder={handleReminder}
+                  />
+                ))}
+                {/* {isHost ? (
                 <LineItem
                   label="Claimed Amount"
                   price={currentTotal()}
@@ -639,43 +680,44 @@ export default function LiveReceiptPage({
                   bold
                 ></LineItem>
               ) : null} */}
-              <LineItem
-                label="Subtotal"
-                price={
-                  receipt
-                    ? parseFloat(receipt.grand_total) -
-                      parseFloat(receipt.shared_cost) -
-                      parseFloat(receipt.addl_gratuity)
-                    : 0
-                }
-                labelColor="text-midgray"
-                bold
-              ></LineItem>
-              <LineItem
-                label="Shared Charges"
-                price={
-                  receipt
-                    ? parseFloat(receipt.shared_cost) +
-                      parseFloat(receipt.addl_gratuity)
-                    : 0
-                }
-                labelColor="text-midgray"
-                bold
-              ></LineItem>
-              <LineItem
-                label="Grand Total"
-                price={receipt ? parseFloat(receipt.grand_total) : 0}
-                labelColor="text-primary"
-                bold
-              ></LineItem>
+                <LineItem
+                  label="Subtotal"
+                  price={
+                    receipt
+                      ? parseFloat(receipt.grand_total) -
+                        parseFloat(receipt.shared_cost) -
+                        parseFloat(receipt.addl_gratuity)
+                      : 0
+                  }
+                  labelColor="text-midgray"
+                  bold
+                ></LineItem>
+                <LineItem
+                  label="Shared Charges"
+                  price={
+                    receipt
+                      ? parseFloat(receipt.shared_cost) +
+                        parseFloat(receipt.addl_gratuity)
+                      : 0
+                  }
+                  labelColor="text-midgray"
+                  bold
+                ></LineItem>
+                <LineItem
+                  label="Grand Total"
+                  price={receipt ? parseFloat(receipt.grand_total) : 0}
+                  labelColor="text-primary"
+                  bold
+                ></LineItem>
+              </div>
+            )
+          ) : (
+            <div className="flex w-full items-center justify-center">
+              <Spinner color="text-primary" />
             </div>
-          )
-        ) : (
-          <div className="flex w-full items-center justify-center">
-            <Spinner color="text-primary" />
-          </div>
-        )}
-      </Container>
+          )}
+        </Container>
+      )}
     </div>
   );
 }

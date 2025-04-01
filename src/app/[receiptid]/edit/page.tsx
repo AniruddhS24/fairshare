@@ -309,13 +309,14 @@ export default function EditReceiptPage({
 
   return splitDetailsStep ? (
     <Container>
-      <LogoutSection></LogoutSection>
-      <Text type="xl_heading" className="text-darkest">
-        Split Details
+      <LogoutSection
+        onBack={() => setSplitDetailsStep(!splitDetailsStep)}
+      ></LogoutSection>
+      <Spacer size="medium" />
+      <Text type="m_heading" className="text-darkest">
+        Number of People
       </Text>
-      <Spacer size="large" />
       <Text type="body" className="text-midgray">
-        <i className={`fas fa-regular fa-user-group mr-1`}></i>
         <b>How many people</b> are splitting this receipt, including you?
       </Text>
       <Spacer size="small" />
@@ -346,10 +347,12 @@ export default function EditReceiptPage({
           <i className="fas fa-plus"></i>
         </button>
       </div>
-      <Spacer size="small" />
+      <Spacer size="large" />
+      <Text type="m_heading" className="text-darkest">
+        For The Table
+      </Text>
       <Text type="body" className="text-midgray">
-        <i className={`fas fa-regular fa-earth-americas mr-1`}></i>
-        Were any items split <b>evenly amongst everyone</b>?
+        Were any items split <b>evenly among everyone</b>?
       </Text>
       <Spacer size="small" />
       <div className="w-full">
@@ -388,7 +391,7 @@ export default function EditReceiptPage({
         </div>
       </div>
       <StickyButton
-        label="Next"
+        label="Split Receipt"
         onClick={handleSaveEdits}
         disabled={numConsumers.value === 1}
         sticky
@@ -404,9 +407,26 @@ export default function EditReceiptPage({
       <Text type="body" className="text-midgray">
         Fix any mistakes or add missing items.
       </Text>
-      <Spacer size="large" />
+      <Spacer size="medium" />
       {!loading ? (
         <div className="w-full">
+          <div className="col-span-12 grid grid-cols-12 items-center mb-1">
+            <div className="col-span-5 flex justify-start items-center">
+              <Text type="body_semi" className="text-midgray">
+                Item Name
+              </Text>
+            </div>
+            <div className="col-span-3 flex justify-center items-center">
+              <Text type="body_semi" className="text-midgray">
+                Qty
+              </Text>
+            </div>
+            <div className="col-span-3 flex justify-center items-center">
+              <Text type="body_semi" className="text-midgray">
+                Total Price
+              </Text>
+            </div>
+          </div>
           <div className="grid grid-cols-12 gap-y-3 w-full">
             {receiptItems
               .filter((item) => !item.deleted)
@@ -544,7 +564,7 @@ export default function EditReceiptPage({
           />
           <Spacer size="large" />
           <StickyButton
-            label="Next"
+            label="Table Details"
             onClick={() => setSplitDetailsStep(true)}
             disabled={receiptItems.some((item) => item.name === "")}
             sticky
