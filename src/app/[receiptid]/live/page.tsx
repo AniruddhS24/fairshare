@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Spacer from "@/components/Spacer";
-import LogoutSection from "@/components/LogoutSection";
 import Text from "@/components/Text";
 import DynamicSelection from "@/components/DynamicSelection";
 import Container from "@/components/Container";
@@ -224,6 +223,10 @@ export default function LiveReceiptPage({
     ...Object.values(pendingAdditions),
   ].filter((split) => !pendingDeletions[split.id]);
 
+  const remainingUsers = () => {
+    return (receipt?.consumers || 0) - Object.keys(users).length;
+  };
+
   const individualTotal = (user_id: string) => {
     const split_counts: { [key: string]: number } = {};
     const my_items: { [key: string]: { name: string; price: string } } = {};
@@ -402,7 +405,7 @@ export default function LiveReceiptPage({
   };
 
   return (
-    <div className="h-screen w-full">
+    <div className="w-full">
       {isReminderPopupVisible && (
         <div className="fixed inset-0 flex items-center justify-center z-50">
           <div className="absolute inset-0 bg-[#1C2B35] opacity-20"></div>{" "}
@@ -461,8 +464,7 @@ export default function LiveReceiptPage({
         </div>
       )}
       {isQRCode ? (
-        <Container>
-          <LogoutSection onBack={() => setIsQRCode(!isQRCode)}></LogoutSection>
+        <Container header onBack={() => setIsQRCode(!isQRCode)}>
           <Text type="xl_heading" className="text-darkest">
             QR Code
           </Text>
@@ -470,17 +472,21 @@ export default function LiveReceiptPage({
             Scan this QR code to join the receipt as a consumer.
           </Text>
           <Spacer size="large"></Spacer>
-          <div className="flex justify-center items-center w-full">
-            <QRCodeCanvas
-              value={`https://payven.app/user?receiptid=${params.receiptid}&onboardConsumer=true`}
-              size={window.innerWidth * 0.8}
-              className="w-full max-w-[400px]"
-            />
+          <div className="w-full flex justify-center items-center">
+            <div className="bg-white shadow-[0px_0px_16px_0px_rgba(0,0,0,0.15)] rounded-2xl p-4 w-full max-w-full flex justify-center items-center">
+              <QRCodeCanvas
+                value={`https://payven.app/user?receiptid=${params.receiptid}&onboardConsumer=true`}
+                className="w-full h-full"
+                size={Math.min(
+                  window.innerWidth * 0.8,
+                  window.innerHeight * 0.8
+                )} // Adjust to make it square
+              />
+            </div>
           </div>
         </Container>
       ) : (
-        <Container>
-          <LogoutSection></LogoutSection>
+        <Container header>
           {isHost && !unclaimedItems && !isSettled ? (
             <Banner
               label="Settle receipt to finalize payments!"
@@ -527,7 +533,8 @@ export default function LiveReceiptPage({
             </Text>
           ) : isHost ? (
             <Text type="body" className="text-midgray">
-              Tap the portions you consumed and share receipt link with others.
+              Tap the portions you consumed and share receipt link with all
+              consumers.
             </Text>
           ) : (
             <Text type="body" className="text-midgray">
@@ -537,7 +544,18 @@ export default function LiveReceiptPage({
           )}
           {isHost ? (
             <div className="w-full">
-              <Spacer size="medium" />
+              <div className="w-full flex justify-start items-center mt-1 mb-2">
+                <Text type="body_bold" className="mr-2">
+                  Waiting for
+                </Text>
+                {remainingUsers() > 0 ? (
+                  <span className="px-1.5 font-bold text-error bg-red-50 rounded-s rounded-e">
+                    <i className="fa-solid fa-user fa-xs"></i>{" "}
+                    {remainingUsers()} people
+                  </span>
+                ) : null}
+              </div>
+
               <SegmentedToggle
                 tab1label="Receipt"
                 tab1icon="fa-receipt"

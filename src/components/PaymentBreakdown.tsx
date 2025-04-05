@@ -27,7 +27,7 @@ const PaymentBreakdown: React.FC<PaymentBreakdownProps> = ({
         }`}
       >
         <Text type="m_heading" className="text-darkest">
-          My Total
+          What I Owe
         </Text>
         <div className="flex items-center gap-2">
           <Text type="m_heading" className="text-primary">

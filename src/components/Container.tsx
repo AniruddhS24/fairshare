@@ -1,19 +1,30 @@
 import React from "react";
+import Header from "@/components/Header";
 
 interface ContainerProps {
+  header?: boolean;
+  onBack?: () => void;
   centered?: boolean;
   children: React.ReactNode;
 }
 
-const Container: React.FC<ContainerProps> = ({ children, centered }) => {
+const Container: React.FC<ContainerProps> = ({
+  header,
+  onBack,
+  children,
+  centered,
+}) => {
   return (
-    <div
-      className={`h-full flex flex-col ${
-        centered ? "items-center" : "items-start"
-      } justify-start bg-white px-4 pb-12`}
-    >
-      {children}
-    </div>
+    <>
+      {header ? <Header onBack={onBack} /> : null}
+      <div
+        className={`h-full flex flex-col ${
+          centered ? "items-center" : "items-start"
+        } justify-start bg-white px-4 pb-12`}
+      >
+        {children}
+      </div>
+    </>
   );
 };
 

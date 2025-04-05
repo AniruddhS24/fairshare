@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import Text from "../../components/Text";
 import Image from "next/image";
-import LogoutSection from "@/components/LogoutSection";
 import Spacer from "@/components/Spacer";
 import ModifyButton from "@/components/ModifyButton";
 import StickyButton from "@/components/StickyButton";
@@ -106,8 +105,7 @@ export default function UploadReceiptPage() {
   };
 
   return uploadedImage ? (
-    <Container centered>
-      <LogoutSection></LogoutSection>
+    <Container centered header>
       <Spacer size="medium" />
       <ModifyButton
         icon="fa-sync-alt"
@@ -130,8 +128,7 @@ export default function UploadReceiptPage() {
       />
     </Container>
   ) : (
-    <Container centered>
-      <LogoutSection></LogoutSection>
+    <Container centered header>
       <Spacer size="large" />
       <Image src="/applogo.png" alt="Logo" width={200} height={100} />
       <Spacer size="large" />

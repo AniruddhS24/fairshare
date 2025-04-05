@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Spacer from "@/components/Spacer";
 import Text from "../../../components/Text";
-import LogoutSection from "@/components/LogoutSection";
 import ItemInput from "@/components/ItemInput";
 import PriceInput from "@/components/PriceInput";
 import QuantityInput from "@/components/QuantityInput";
@@ -308,11 +307,7 @@ export default function EditReceiptPage({
   };
 
   return splitDetailsStep ? (
-    <Container>
-      <LogoutSection
-        onBack={() => setSplitDetailsStep(!splitDetailsStep)}
-      ></LogoutSection>
-      <Spacer size="medium" />
+    <Container header onBack={() => setSplitDetailsStep(!splitDetailsStep)}>
       <Text type="m_heading" className="text-darkest">
         Number of People
       </Text>
@@ -398,8 +393,7 @@ export default function EditReceiptPage({
       />
     </Container>
   ) : (
-    <Container>
-      <LogoutSection></LogoutSection>
+    <Container header>
       <Text type="xl_heading" className="text-darkest">
         Edit Receipt
       </Text>
