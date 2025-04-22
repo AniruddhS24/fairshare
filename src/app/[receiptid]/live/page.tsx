@@ -12,9 +12,10 @@ import SegmentedToggle from "@/components/Toggle";
 import ConsumerBreakdown from "@/components/ConsumerBreakdown";
 import LineItem from "@/components/LineItem";
 import StickyButton from "@/components/StickyButton";
+import ModifyButton from "@/components/ModifyButton";
+import TextInput from "@/components/TextInput";
 import useWebSocket from "react-use-websocket";
 import { Banner, BannerProps } from "@/components/Banner";
-import OptionButton from "@/components/OptionButton";
 import { QRCodeCanvas } from "qrcode.react";
 
 import {
@@ -35,6 +36,8 @@ import {
   createSplit,
   deleteSplit,
   markRoleDone,
+  hostCreateUser,
+  hostDeleteUser,
 } from "@/lib/backend";
 
 interface HostActionButtonProps {
@@ -80,6 +83,14 @@ export default function LiveReceiptPage({
   // });
   const [receiptItems, setReceiptItems] = useState<{ [key: string]: Item }>({});
   const [users, setUsers] = useState<{ [key: string]: User }>({});
+  const [isCreatePersonPopupVisible, setIsCreatePersonPopupVisible] =
+    useState(false);
+  const [isDeletePersonPopupVisible, setIsDeletePersonPopupVisible] =
+    useState(false);
+  const [newPersonName, setNewPersonName] = useState("");
+  const [hostEditingUser, setHostEditingUser] = useState<string | null>(
+    user?.id || null
+  );
   const [splits, setSplits] = useState<{ [key: string]: Split }>({});
   const [sharedCharges, setSharedCharges] = useState<number>(0.0);
 
@@ -169,8 +180,7 @@ export default function LiveReceiptPage({
     const userCount = unique_users.size;
 
     setSharedCharges(
-      (parseFloat(_receipt.shared_cost) + parseFloat(_receipt.addl_gratuity)) /
-        _receipt.consumers
+      parseFloat(_receipt.shared_cost) + parseFloat(_receipt.addl_gratuity)
     );
 
     const splits_on_items: { [key: string]: { [key: string]: boolean } } = {};
@@ -269,17 +279,24 @@ export default function LiveReceiptPage({
 
     return my_items;
   };
-  // const currentTotal = () => {
-  //   const item_split_map: { [key: string]: number } = {};
-  //   for (const split of mergedSplits)
-  //     item_split_map[`${split.item_id}_${split.split_id}`] =
-  //       parseFloat(receiptItems[split.item_id].price) /
-  //       parseFloat(receiptItems[split.item_id].quantity);
-  //   return Object.values(item_split_map).reduce(
-  //     (total, price) => total + price,
-  //     0
-  //   );
-  // };
+
+  const individualSharedCost = (user_id: string) => {
+    const total = individualTotal(user_id);
+    const total_price = Object.values(total).reduce((sum, item) => {
+      return sum + parseFloat(item.price);
+    }, 0);
+    const subtotal = subTotal();
+    const proportional_shared_cost = (total_price / subtotal) * sharedCharges;
+    return proportional_shared_cost;
+  };
+
+  const subTotal = () => {
+    return receipt
+      ? parseFloat(receipt.grand_total) -
+          parseFloat(receipt.shared_cost) -
+          parseFloat(receipt.addl_gratuity)
+      : 0;
+  };
 
   useEffect(() => {
     setLoading(true);
@@ -294,6 +311,7 @@ export default function LiveReceiptPage({
       getRole(params.receiptid).then((role) => {
         if (role.permission === Permission.HOST) {
           setIsHost(true);
+          setHostEditingUser(user?.id || null);
         } else if (role.permission === Permission.UNAUTHORIZED) {
           router.push(
             `/user?receiptid=${params.receiptid}&onboardConsumer=true`
@@ -367,7 +385,12 @@ export default function LiveReceiptPage({
 
     Object.values(addsToProcess).forEach(async (item) => {
       try {
-        await createSplit(params.receiptid, item.item_id, item.split_id);
+        await createSplit(
+          params.receiptid,
+          hostEditingUser || user?.id || "",
+          item.item_id,
+          item.split_id
+        );
       } catch (error) {
         console.error("Failed to add:", item.id, error);
         setPendingAdditions((prev) => {
@@ -392,6 +415,59 @@ export default function LiveReceiptPage({
     setIsSettled(true);
     await markAsSettled(params.receiptid);
     await backend("GET", `/receipt/${params.receiptid}/broadcast`);
+  };
+
+  const addPerson = async () => {
+    setIsCreatePersonPopupVisible(false);
+    const userId = `addperson-${Date.now()}-${Math.random()
+      .toString(36)
+      .substring(2, 10)}`;
+    const fakePhone = `guest-${Date.now()}-${Math.random()
+      .toString(36)
+      .substring(2, 10)}`;
+    const new_person_name = newPersonName;
+    setUsers((prev) => ({
+      ...prev,
+      [userId]: {
+        id: userId,
+        name: new_person_name,
+        phone: fakePhone,
+        venmo_handle: "",
+      },
+    }));
+    setHostEditingUser(userId);
+    await hostCreateUser(params.receiptid, userId, new_person_name, fakePhone);
+  };
+
+  const deletePerson = async () => {
+    setIsDeletePersonPopupVisible(false);
+    if (!hostEditingUser) return;
+    setHostEditingUser(user?.id || null);
+    setUsers((prev) => {
+      const newUsers = { ...prev };
+      delete newUsers[hostEditingUser];
+      return newUsers;
+    });
+    const splitsToDelete: string[] = [];
+    for (const split of Object.values(splits)) {
+      if (split.user_id == hostEditingUser) {
+        splitsToDelete.push(split.id);
+        deleteSplit(params.receiptid, split.id);
+      }
+    }
+    setSplits((prev) => {
+      const newSplits = { ...prev };
+      for (const id of splitsToDelete) delete newSplits[id];
+      return newSplits;
+    });
+    await hostDeleteUser(params.receiptid, hostEditingUser);
+    // const new_person_name = newPersonName;
+    // const new_user = await createUser(params.receiptid, new_person_name);
+    // setBanner({
+    //   label: "Person added successfully!",
+    //   icon: "fa-check",
+    //   type: "success",
+    // });
   };
 
   const sendToVenmo = () => {
@@ -463,6 +539,66 @@ export default function LiveReceiptPage({
           </div>
         </div>
       )}
+      {isCreatePersonPopupVisible && (
+        <div className="fixed inset-0 flex items-center justify-center z-50">
+          <div className="absolute inset-0 bg-[#1C2B35] opacity-20"></div>{" "}
+          {/* Blurred Background */}
+          <div className="relative z-10 bg-white p-7 rounded-lg shadow-lg w-full mx-4 text-center">
+            <p className="text-primary text-lg font-bold">Add Person</p>
+            <p className="text-darkest text-base font-normal mb-2">
+              Add a new consumer to the receipt and select their items.
+            </p>
+            <TextInput
+              placeholder="Name"
+              value={newPersonName}
+              setValue={setNewPersonName}
+            />
+            <div className="mt-5 flex justify-center space-x-4">
+              <button
+                className="flex-1 px-4 py-2 bg-white text-midgray font-bold border rounded-full"
+                onClick={() => setIsCreatePersonPopupVisible(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="flex-1 px-4 py-2 bg-primary text-white font-bold rounded-full disabled:opacity-50"
+                onClick={addPerson}
+                disabled={newPersonName.length == 0}
+              >
+                Add
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {isDeletePersonPopupVisible && (
+        <div className="fixed inset-0 flex items-center justify-center z-50">
+          <div className="absolute inset-0 bg-[#1C2B35] opacity-20"></div>{" "}
+          {/* Blurred Background */}
+          <div className="relative z-10 bg-white p-7 rounded-lg shadow-lg w-full mx-4 text-center">
+            <p className="text-primary text-lg font-bold">Delete Person</p>
+            <p className="text-darkest text-base font-normal mb-2">
+              Are you sure you want to delete{" "}
+              {hostEditingUser ? users[hostEditingUser].name : ""} from the
+              receipt?
+            </p>
+            <div className="mt-5 flex justify-center space-x-4">
+              <button
+                className="flex-1 px-4 py-2 bg-white text-midgray font-bold border rounded-full"
+                onClick={() => setIsDeletePersonPopupVisible(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="flex-1 px-4 py-2 bg-primary text-white font-bold rounded-full disabled:opacity-50"
+                onClick={deletePerson}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {isQRCode ? (
         <Container header onBack={() => setIsQRCode(!isQRCode)}>
           <Text type="xl_heading" className="text-darkest">
@@ -484,6 +620,12 @@ export default function LiveReceiptPage({
               />
             </div>
           </div>
+          <StickyButton
+            label="Share Receipt Link"
+            icon="fa-arrow-up-from-bracket"
+            onClick={() => shareReceipt(true)}
+            sticky
+          />
         </Container>
       ) : (
         <Container header>
@@ -515,14 +657,12 @@ export default function LiveReceiptPage({
                   className="ms-3"
                   disabled={isSettled}
                 />
-                {!unclaimedItems ? (
-                  <HostActionButton
-                    icon="fa-arrow-up-from-bracket"
-                    onClick={() => shareReceipt(true)}
-                    className="ms-3"
-                    disabled={isSettled}
-                  />
-                ) : null}
+                <HostActionButton
+                  icon="fa-arrow-up-from-bracket"
+                  onClick={() => setIsQRCode(true)}
+                  className="ms-3"
+                  disabled={isSettled}
+                />
               </div>
             ) : null}
           </div>
@@ -544,18 +684,68 @@ export default function LiveReceiptPage({
           )}
           {isHost ? (
             <div className="w-full">
-              <div className="w-full flex justify-start items-center mt-1 mb-2">
-                <Text type="body_bold" className="mr-2">
-                  Waiting for
-                </Text>
-                {remainingUsers() > 0 ? (
-                  <span className="px-1.5 font-bold text-error bg-red-50 rounded-s rounded-e">
-                    <i className="fa-solid fa-user fa-xs"></i>{" "}
-                    {remainingUsers()} people
-                  </span>
-                ) : null}
-              </div>
-
+              {!isSettled && (
+                <div className="w-full mb-2">
+                  {remainingUsers() > 0 ? (
+                    <div className="w-full flex justify-between items-center mt-1 mb-2">
+                      <div className="flex items-center">
+                        <Text type="body_bold" className="mr-2">
+                          Waiting for
+                        </Text>
+                        <span className="px-1.5 font-bold text-error bg-red-50 rounded-s rounded-e">
+                          <i className="fa-solid fa-user fa-xs"></i>{" "}
+                          {remainingUsers()} people
+                        </span>
+                      </div>
+                      <ModifyButton
+                        label="Add Person"
+                        icon="fa-plus"
+                        onClick={() => setIsCreatePersonPopupVisible(true)}
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-full flex justify-between items-center mt-1 mb-2">
+                      <div className="flex items-center">
+                        <Text type="body_bold" className="mr-2">
+                          Waiting for
+                        </Text>
+                        <span className="px-1.5 font-bold text-accent bg-teal-50 rounded-s rounded-e">
+                          <i className="fa-solid fa-user fa-xs"></i>{" "}
+                          {remainingUsers()} people
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                  <div className="w-full flex flex-wrap gap-2">
+                    {Object.values(users).map((person, index) => (
+                      <div
+                        className={`relative px-2 h-10 rounded-lg flex items-center justify-center ${
+                          person.id === hostEditingUser
+                            ? "bg-lightestgray text-primary text-base font-bold"
+                            : "text-midgray text-base font-medium"
+                        }`}
+                        key={index}
+                        onClick={() => setHostEditingUser(person.id)}
+                      >
+                        <span>{person.name}</span>
+                        {person.id !== user?.id &&
+                          person.id === hostEditingUser && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setIsDeletePersonPopupVisible(true);
+                              }}
+                              className="absolute -top-2 -right-2 w-5 h-5 bg-white rounded-full border border-lightestgray flex items-center justify-center shadow-sm hover:bg-gray-50 transition-transform duration-200 active:scale-90"
+                            >
+                              <i className="fas fa-minus text-primary text-xs"></i>
+                            </button>
+                          )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <Spacer size="small" />
               <SegmentedToggle
                 tab1label="Receipt"
                 tab1icon="fa-receipt"
@@ -572,12 +762,13 @@ export default function LiveReceiptPage({
               <div className="w-full pb-20">
                 <PaymentBreakdown
                   consumer_items={individualTotal(user?.id || "")}
-                  sharedCharges={sharedCharges}
+                  sharedCharges={individualSharedCost(user?.id || "")}
                 ></PaymentBreakdown>
                 <Spacer size="medium" />
                 <DynamicSelection
                   receipt_id={params.receiptid}
                   items={receiptItems}
+                  activeUserId={hostEditingUser || user?.id || null}
                   users={users}
                   splits={splits}
                   pendingAdds={pendingAdditions}
@@ -600,13 +791,7 @@ export default function LiveReceiptPage({
               ) : null} */}
                 <LineItem
                   label="Subtotal"
-                  price={
-                    receipt
-                      ? parseFloat(receipt.grand_total) -
-                        parseFloat(receipt.shared_cost) -
-                        parseFloat(receipt.addl_gratuity)
-                      : 0
-                  }
+                  price={subTotal()}
                   labelColor="text-midgray"
                   bold
                 ></LineItem>
@@ -646,29 +831,6 @@ export default function LiveReceiptPage({
                     onClick={() => setIsSettledPopupVisible(true)}
                     sticky
                   />
-                ) : isHost && !isSettled ? (
-                  // <StickyButton
-                  //   label="Share Receipt Link"
-                  //   icon="fa-arrow-up-from-bracket"
-                  //   onClick={() => shareReceipt(true)}
-                  //   sticky
-                  // />
-                  <div className="fixed bottom-0 left-0 w-full p-2 bg-white flex justify-between z-10">
-                    <OptionButton
-                      label="QR Code"
-                      iconSize="fa-lg"
-                      icon="fa-qrcode"
-                      onClick={() => setIsQRCode(true)}
-                      className={`bg-white mr-2 p-2 rounded-full border-2 border-primarylight text-primary transition-colors duration-150 ease-in-out active:bg-primarylight`}
-                    />
-                    <OptionButton
-                      label="Share Link"
-                      iconSize="fa-lg"
-                      icon="fa-arrow-up-from-bracket"
-                      onClick={() => shareReceipt(true)}
-                      className={`bg-primary ml-2 p-2 rounded-full border-2 border-primary text-white transition-colors duration-150 ease-in-out active:bg-primarydark`}
-                    />
-                  </div>
                 ) : !isHost && isSettled ? (
                   <StickyButton
                     label="Pay Host"
@@ -685,7 +847,7 @@ export default function LiveReceiptPage({
                     key={index}
                     consumer_items={individualTotal(person?.id)}
                     user_name={person?.name || ""}
-                    sharedCharges={sharedCharges}
+                    sharedCharges={individualSharedCost(person?.id)}
                     isHost={person?.id == user?.id}
                     handleReminder={handleReminder}
                   />
@@ -700,13 +862,7 @@ export default function LiveReceiptPage({
               ) : null} */}
                 <LineItem
                   label="Subtotal"
-                  price={
-                    receipt
-                      ? parseFloat(receipt.grand_total) -
-                        parseFloat(receipt.shared_cost) -
-                        parseFloat(receipt.addl_gratuity)
-                      : 0
-                  }
+                  price={subTotal()}
                   labelColor="text-midgray"
                   bold
                 ></LineItem>

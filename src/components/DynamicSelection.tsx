@@ -1,11 +1,11 @@
 import React from "react";
 import { Item, User, Split } from "@/lib/backend";
 import Text from "@/components/Text";
-import { useGlobalContext } from "@/contexts/GlobalContext";
 
 interface DynamicSelectionProps {
   receipt_id: string;
   items: { [key: string]: Item };
+  activeUserId: string | null;
   users: { [key: string]: User };
   splits: { [key: string]: Split };
   pendingAdds: { [key: string]: Split };
@@ -23,6 +23,7 @@ interface DynamicSelectionProps {
 const DynamicSelection: React.FC<DynamicSelectionProps> = ({
   receipt_id,
   items,
+  activeUserId,
   users,
   splits,
   pendingAdds,
@@ -32,7 +33,6 @@ const DynamicSelection: React.FC<DynamicSelectionProps> = ({
   disabled,
   onSplitChange,
 }) => {
-  const { user } = useGlobalContext();
   // const [activeMenu, setActiveMenu] = useState<string | null>(null);
 
   function generateHexUUID16() {
@@ -42,8 +42,8 @@ const DynamicSelection: React.FC<DynamicSelectionProps> = ({
   }
 
   const handleAddSplit = async (itemId: string) => {
-    if (!user?.id) return;
-    const user_id = user.id;
+    if (!activeUserId) return;
+    const user_id = activeUserId;
     const tempSplitId = `temp${generateHexUUID16()}`;
     const key = `${itemId}_${tempSplitId}_${user_id}`;
 
@@ -63,10 +63,10 @@ const DynamicSelection: React.FC<DynamicSelectionProps> = ({
   };
 
   const handleAdjustSplit = async (itemId: string, splitId: string) => {
-    if (!user?.id) return;
+    if (!activeUserId) return;
     if (!itemId) return;
     const currentSplits = splits;
-    const user_id = user.id;
+    const user_id = activeUserId;
     const key = `${itemId}_${splitId}_${user_id}`;
 
     // console.log(key);
@@ -133,7 +133,7 @@ const DynamicSelection: React.FC<DynamicSelectionProps> = ({
               allSplits[split.split_id].consumers.push(
                 users[split.user_id]?.name || "Unknown"
               );
-              allSplits[split.split_id].mine ||= split.user_id == user?.id;
+              allSplits[split.split_id].mine ||= split.user_id == activeUserId;
             });
           // TODO: Pass mergedSplits to splits and remove bottom logic, should work...
           Object.values(pendingAdds)
@@ -153,7 +153,7 @@ const DynamicSelection: React.FC<DynamicSelectionProps> = ({
               allSplits[split.split_id].consumers.push(
                 users[split.user_id]?.name || "Unknown"
               );
-              allSplits[split.split_id].mine ||= split.user_id == user?.id;
+              allSplits[split.split_id].mine ||= split.user_id == activeUserId;
             });
 
           // const allSplits = [

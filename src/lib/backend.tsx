@@ -208,11 +208,12 @@ export async function getNewSplitID(
 
 export async function createSplit(
   receipt_id: string,
+  user_id: string,
   item_id: string,
   split_id: string
 ): Promise<Split> {
   return await backend("POST", `/receipt/${receipt_id}/split`, {
-    receipt_id,
+    user_id,
     item_id,
     split_id,
   });
@@ -231,6 +232,29 @@ export interface User {
   name: string;
   phone: string;
   venmo_handle: string;
+}
+
+export async function hostCreateUser(
+  receipt_id: string,
+  user_id: string,
+  name: string,
+  phone: string
+): Promise<User> {
+  return await backend("POST", `/receipt/${receipt_id}/addperson`, {
+    receipt_id,
+    user_id,
+    name,
+    phone,
+  });
+}
+
+export async function hostDeleteUser(
+  receipt_id: string,
+  user_id: string
+): Promise<void> {
+  await backend("POST", `/receipt/${receipt_id}/deleteperson`, {
+    user_id,
+  });
 }
 
 export interface Role {
